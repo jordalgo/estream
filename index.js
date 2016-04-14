@@ -1,5 +1,6 @@
 var TYPE_ERROR = 'error';
 var TYPE_NEXT = 'next';
+var TYPE_COMPLETE = 'complete';
 
 var createPipe;
 
@@ -16,15 +17,15 @@ function startError() {
   return this;
 }
 
-function sourceMessage(state, type, value, last) {
+function sourceMessage(state, type, value) {
   if (state.complete) {
     throw new Error('You pushed a value to a completed source');
   }
-  if (last) {
+  if (type === TYPE_COMPLETE) {
     state.complete = true;
     if (state.open) {
       state.pipes.forEach(function(pipe) {
-        pipe[type](value, last);
+        pipe[type](value);
       });
     }
     state.pipes = [];
@@ -32,7 +33,7 @@ function sourceMessage(state, type, value, last) {
   }
   if (state.open) {
     state.pipes.forEach(function(pipe) {
-      pipe[type](value, last);
+      pipe[type](value);
     });
   }
 }
@@ -53,15 +54,23 @@ function createSource(fn) {
     pipes: []
   };
 
+  function startSource() {
+    fn(
+      sourceMessage.bind(null, state, TYPE_NEXT),
+      sourceMessage.bind(null, state, TYPE_ERROR),
+      sourceMessage.bind(null, state, TYPE_COMPLETE)
+    );
+  }
+
   // Public API
   s.addPipe = addPipe.bind(null, state);
   s.start = function(delay) {
     if (arguments.length) {
       setTimeout(function() {
-        fn(sourceMessage.bind(null, state, TYPE_NEXT), sourceMessage.bind(null, state, TYPE_ERROR));
+        startSource();
       }, delay);
     } else {
-      fn(sourceMessage.bind(null, state, TYPE_NEXT), sourceMessage.bind(null, state, TYPE_ERROR));
+      startSource();
     }
     s.start = startError.bind(s);
     return s;
@@ -78,21 +87,24 @@ function createSource(fn) {
 // Pipes
 
 function _notify(state, message) {
-  var finalLast = false;
-  if (message.last) {
+  if (message.type === TYPE_COMPLETE) {
     if (state.sourceCount < 2) {
-      finalLast = true;
+      state.observers[message.type].forEach(function(o) {
+        o(message.value);
+      });
+      state.pipes.forEach(function(pipe) {
+        pipe[message.type](message.value);
+      });
+      state.pipes = [];
     }
     state.sourceCount--;
-  }
-  state.observers[message.type].forEach(function(o) {
-    o(message.value, finalLast);
-  });
-  state.pipes.forEach(function(pipe) {
-    pipe[message.type](message.value, finalLast);
-  });
-  if (finalLast) {
-    state.pipes = [];
+  } else {
+    state.observers[message.type].forEach(function(o) {
+      o(message.value);
+    });
+    state.pipes.forEach(function(pipe) {
+      pipe[message.type](message.value);
+    });
   }
 }
 
@@ -106,11 +118,10 @@ function onAction(state, action, fn) {
   return this;
 }
 
-function pipeMessage(type, value, last) {
+function pipeMessage(type, value) {
   this._notify({
     type: type,
-    value: value,
-    last: last
+    value: value
   });
 }
 
@@ -118,11 +129,10 @@ function pipeMessage(type, value, last) {
 
 function map(state, fn) {
   var p = createPipe(this);
-  p.next = function(value, last) {
+  p.next = function(value) {
     this._notify({
       value: fn(value),
-      type: TYPE_NEXT,
-      last: last
+      type: TYPE_NEXT
     });
   };
   return p;
@@ -130,11 +140,10 @@ function map(state, fn) {
 
 function scan(state, fn, acc) {
   var p = createPipe(this);
-  p.next = function(value, last) {
+  p.next = function(value) {
     this._notify({
       value: acc = fn(acc, value),
-      type: TYPE_NEXT,
-      last: last
+      type: TYPE_NEXT
     });
   }
   return p;
@@ -178,7 +187,6 @@ function take(state, count) {
   return p;
 }
 
-
 function createPipe() {
   var p = function() {};
   var sources = Array.prototype.slice.call(arguments);
@@ -190,7 +198,8 @@ function createPipe() {
     pipes: [],
     observers: {
       next: [],
-      error: []
+      error: [],
+      complete: []
     }
   };
 
@@ -200,9 +209,11 @@ function createPipe() {
   // Public API
   p.onNext = onAction.bind(p, state, TYPE_NEXT);
   p.onError = onAction.bind(p, state, TYPE_ERROR);
+  p.onComplete = onAction.bind(p, state, TYPE_COMPLETE);
 
   p.next = pipeMessage.bind(p, TYPE_NEXT);
   p.error = pipeMessage.bind(p, TYPE_ERROR);
+  p.complete = pipeMessage.bind(p, TYPE_COMPLETE);
 
   p.map = map.bind(p, state);
   p.scan = scan.bind(p, state);
