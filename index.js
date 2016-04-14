@@ -4,43 +4,37 @@ var TYPE_NEXT = 'next';
 var createPipe;
 
 function addPipe(state, pipe) {
-  state.pipes.push(pipe);
+  if (state.pipes.indexOf(pipe) === -1) {
+    state.pipes.push(pipe);
+  }
 }
 
 // Sources
 
 function startError() {
   console.warn('This source has already started.');
+  return this;
 }
 
-function next(state, value, last) {
-  if (state.ended) {
+function sourceMessage(state, type, value, last) {
+  if (state.complete) {
     throw new Error('You pushed a value to a completed source');
   }
   if (last) {
     state.complete = true;
-  }
-  if (!state.open) {
+    if (state.open) {
+      state.pipes.forEach(function(pipe) {
+        pipe[type](value, last);
+      });
+    }
+    state.pipes = [];
     return;
   }
-  state.pipes.forEach(function(pipe) {
-    pipe.next(value, last);
-  });
-}
-
-function error(state, value, last) {
-  if (state.complete) {
-    throw new Error('You pushed an error to a completed source.');
+  if (state.open) {
+    state.pipes.forEach(function(pipe) {
+      pipe[type](value, last);
+    });
   }
-  if (last) {
-    state.complete = true;
-  }
-  if (!state.open) {
-    return;
-  }
-  state.pipes.forEach(function(pipe) {
-    pipe.error(value, last);
-  });
 }
 
 function close(state) {
@@ -64,12 +58,12 @@ function createSource(fn) {
   s.start = function(delay) {
     if (arguments.length) {
       setTimeout(function() {
-        fn(next.bind(null, state), error.bind(null, state));
+        fn(sourceMessage.bind(null, state, TYPE_NEXT), sourceMessage.bind(null, state, TYPE_ERROR));
       }, delay);
     } else {
-      fn(next.bind(null, state), error.bind(null, state));
+      fn(sourceMessage.bind(null, state, TYPE_NEXT), sourceMessage.bind(null, state, TYPE_ERROR));
     }
-    s.start = startError;
+    s.start = startError.bind(s);
     return s;
   }
   s.close = close.bind(null, state);
@@ -97,6 +91,9 @@ function _notify(state, message) {
   state.pipes.forEach(function(pipe) {
     pipe[message.type](message.value, finalLast);
   });
+  if (finalLast) {
+    state.pipes = [];
+  }
 }
 
 function addSource(source) {
