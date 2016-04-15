@@ -1,0 +1,34 @@
+{
+  "name": "piping-hot",
+  "version": "0.1.0",
+  "description": "A javascript library with a simplified take on hot observables and streams.",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "documentation": "^4.0.0-beta2",
+    "eslint": "^2.5.3",
+    "eslint-config-airbnb": "^6.2.0",
+    "mocha": "^2.2.1"
+  },
+  "scripts": {
+    "lint": "eslint test/ lib/",
+    "test": "mocha -R spec test/*.js",
+    "docs": "documentation build -f md lib/* > API.md"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jordalgo/piping-hot.git"
+  },
+  "keywords": [
+    "functional",
+    "reactive",
+    "modular",
+    "library"
+  ],
+  "author": "Jordan Rome",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jordalgo/piping-hot/issues"
+  },
+  "homepage": "https://github.com/jordalgo/piping-hot"
+}

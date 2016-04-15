@@ -30,11 +30,11 @@ source.start();
 
 ### Stateless
 
-Both pipes and sources are stateless when it comes to the values they are pushing; they have no current next or error value. You can't connect a pipe to an already started source and get the last value it produced. Once a message has been pushed from the source and through a pipe, the source and pipe have no record of it; it's gone (unless you use pipe's collect but we'll talk about that later).
+Both pipes and sources are stateless when it comes to the values they are pushing; they have no current value (be it an error or next), though both sources and pipes will emit a complete when no more values will come through. Connecting a pipe to an already started source will only yield future values. Once a message has been pushed from the source and through a pipe, the source and pipe have no record of it; it's gone (unless you use pipe's collect but we'll talk about that later).
 
 ### Controlled Starts
 
-Sources do not start pushing values unless you explicitly turn them on. Just adding a pipe to a source doesn't do this. Why? You want to be able to control when the flow of data starts and set up your pipes and transforms before those events start flowing right? You want to be able to add multiple pipes to a single source if you want more than one module reacting to a source's events.
+Sources do not start pushing values unless you explicitly start them. Just adding a pipe to a source doesn't do this. Why? You want to be able to control when the flow of data starts and set up your pipes and transforms before those events start flowing right? You want to be able to add multiple pipes to a single source if you want more than one module reacting to a source's events.
 
 ### Relationships
 
@@ -43,7 +43,7 @@ A pipe can have many sources and many pipes. A pipe can be a source to another p
 
 ### Why Both?
 
-Separation of concerns! Sources have a specific beginning and end where as pipes are just objects which pass along and filter data into next and error buckets. You can compose pipes together and add multiple sources to a single pipe but you can't compose sources. A source has one job and that's to pass events into it's connected pipes.
+Separation of concerns! Sources have a specific beginning and end where as pipes are just objects which pass along and filter data into next, error, and complete buckets. You can compose pipes together and add multiple sources to a single pipe but you can't compose sources. A source has one job and that's to pass events into its connected pipes.
 
 ## Transformations
 
