@@ -23,15 +23,15 @@ This library was inspired by my own need to create a predictable way to work wit
 
 This is the abstraction. Every pipe has next, error, and complete methods. Every pipe also has onNext, onError, onComplete. Next values can be transformed, errors signify that something went wrong, and complete means that no more next values or errors will be passed through this pipe.
 
-### Stateless
+#### Stateless
 
 Pipes are stateless when it comes to the values they are pushing; they have no current value (be it an error, next, or complete), though when pipe's "complete" they will sever all connections to their parent pipes and their observers. Connecting a pipe to another pipe will only yield future values. Once a message has been pushed through a pipe, it has no record of it; it's gone (unless you use pipe's collect but we'll talk about that later).
 
-## Transformations
+#### Transformations
 
 Pipes have the ability to transform (map, scan) values that pass through them. These transformations only act on "next" values and not on "error" values. Similar to Maybe and Either monads.
 
-## Chaining
+#### Chaining
 
 Pipes can be easily chained, or connected, together. All of the transformation methods yield a new pipe that connects to the previous one. The previous pipe has a record of this new pipe and passes along next, error, and complete values to it. A pipe can have multiple pipes connected to it.
 
@@ -46,7 +46,7 @@ pipe1
 const pipe3 = PH.pipe(pipe1, pipe2); // pipe3 will now get messages from pipe1 and pipe2
 ```
 
-## Async Piped to Async
+#### Async Piped to Async
 
 When you want to listen to a pipe's events and trigger another async event, you can use `reroute`. This effectively breaks the pipe chain and puts the responsibility of reconnecting it on you. Here is an example:
 
@@ -68,7 +68,6 @@ pipe1.reroute(function(parentPipe, childPipe) {
 .map(add1)
 .onNext(console.log.bind(console));
 ```
-
 
 
 ## Credits
