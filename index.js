@@ -10,82 +10,6 @@ function addPipe(state, pipe) {
   }
 }
 
-// Sources
-
-function startError() {
-  console.warn('This source has already started.');
-  return this;
-}
-
-function sourceMessage(state, type, value) {
-  if (state.complete) {
-    throw new Error('You pushed a value to a completed source');
-  }
-  if (type === TYPE_COMPLETE) {
-    state.complete = true;
-    if (state.open) {
-      state.pipes.forEach(function(pipe) {
-        pipe[type](value);
-      });
-    }
-    state.pipes = [];
-    return;
-  }
-  if (state.open) {
-    state.pipes.forEach(function(pipe) {
-      pipe[type](value);
-    });
-  }
-}
-
-function close(state) {
-  state.open = false;
-}
-
-function open(state) {
-  state.open = true;
-}
-
-function createSource(fn) {
-  var s = {};
-  var state = {
-    open: true,
-    complete: false,
-    pipes: []
-  };
-
-  function startSource() {
-    fn(
-      sourceMessage.bind(null, state, TYPE_NEXT),
-      sourceMessage.bind(null, state, TYPE_ERROR),
-      sourceMessage.bind(null, state, TYPE_COMPLETE)
-    );
-  }
-
-  // Public API
-  s.addPipe = addPipe.bind(null, state);
-  s.start = function(delay) {
-    if (arguments.length) {
-      setTimeout(function() {
-        startSource();
-      }, delay);
-    } else {
-      startSource();
-    }
-    s.start = startError.bind(s);
-    return s;
-  }
-  s.close = close.bind(null, state);
-  s.open = open.bind(null, state);
-  s.hasCompleted = function() {
-    return state.complete;
-  };
-
-  return s;
-}
-
-// Pipes
-
 function _notify(state, message) {
   if (message.type === TYPE_COMPLETE) {
     if (state.sourceCount < 2) {
@@ -96,6 +20,9 @@ function _notify(state, message) {
         pipe[message.type](message.value);
       });
       state.pipes = [];
+      Object.keys(state.observers).forEach(function(key) {
+        state.observers[key] = [];
+      });
     }
     state.sourceCount--;
   } else {
@@ -187,6 +114,12 @@ function take(state, count) {
   return p;
 }
 
+function reroute(fn) {
+  var p = createPipe();
+  fn(this, p);
+  return p;
+}
+
 function createPipe() {
   var p = function() {};
   var sources = Array.prototype.slice.call(arguments);
@@ -219,6 +152,7 @@ function createPipe() {
   p.scan = scan.bind(p, state);
   p.collect = collect.bind(p, state);
   p.take = take.bind(p, state);
+  p.reroute = reroute.bind(p);
 
   p.addPipe = addPipe.bind(null, state);
   p.addSource = addSource.bind(p);
