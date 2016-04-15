@@ -76,6 +76,19 @@ function scan(state, fn, acc) {
   return p;
 }
 
+function filter(state, fn) {
+  var p = createPipe(this);
+  p.next = function(value) {
+    if (fn(value)) {
+      this._notify({
+        value: value,
+        type: TYPE_NEXT
+      });
+    }
+  };
+  return p;
+}
+
 function collect(state, count) {
   var p = createPipe(this);
   var history = [];
@@ -150,6 +163,7 @@ function createPipe() {
 
   p.map = map.bind(p, state);
   p.scan = scan.bind(p, state);
+  p.filter = filter.bind(p, state);
   p.collect = collect.bind(p, state);
   p.take = take.bind(p, state);
   p.reroute = reroute.bind(p);
@@ -162,6 +176,5 @@ function createPipe() {
 
 
 module.exports = {
-  pipe: createPipe,
-  source: createSource
+  pipe: createPipe
 };

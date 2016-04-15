@@ -1,120 +1,118 @@
 var assert = require('assert');
 var PH = require('../index');
 
-describe('sources', function() {
-  it('can be created', function() {
-    var s = PH.source();
-    assert.equal(typeof s.start, 'function');
-    assert.equal(typeof s.open, 'function');
-    assert.equal(typeof s.close, 'function');
-    assert.equal(typeof s.hasCompleted, 'function');
-    assert.equal(typeof s.addPipe, 'function');
+describe('pipe', function() {
+  it('can create a pipe', function() {
+    assert.equal(typeof PH.pipe, 'function');
   });
 
-  it('only calls the passed function when start is called', function() {
-    var called;
-    var s = PH.source(function() {
-      called = true;
-    });
-    assert.equal(called, undefined);
-    s.start();
-    assert.equal(called, true);
-  });
-
-  it('calls the passed function on a delay if a int is passed to start', function(done) {
-    var called;
-    var s = PH.source(function() {
-      called = true;
-    });
-    assert.equal(called, undefined);
-    s.start(0);
-    assert.equal(called, undefined);
-    setTimeout(function() {
-      assert.equal(called, true);
+  it('has a next and onNext', function(done) {
+    var p = PH.pipe();
+    p.onNext(function(x) {
+      assert.equal(x, 5);
       done();
-    }, 10);
+    });
+    p.next(5);
   });
 
-  it('throws if you call next if the stream has completed', function() {
-    var s = PH.source(function(next, end, complete) {
-      complete();
-      try {
-        next(1);
-        assert.fail();
-      } catch (e) {
-        assert.equal(typeof e, 'object');
-      }
+  it('has a error and onError', function(done) {
+    var p = PH.pipe();
+    p.onError(function(x) {
+      assert.equal(x, 'error');
+      done();
     });
-    s.start();
+    p.error('error');
   });
 
-  it('throws if you call error if the stream has completed', function() {
-    var s = PH.source(function(next, end, complete) {
-      complete();
-      try {
-        error(1);
-        assert.fail();
-      } catch (e) {
-        assert.equal(typeof e, 'object');
-      }
+  it('has a complete and onComplete', function(done) {
+    var p = PH.pipe();
+    p.onComplete(function() {
+      done();
     });
-    s.start();
+    p.complete();
   });
 
-  it('passes values to multiple pipes', function(done) {
-    var pipeCalled = 0;
-    var s = PH.source(function(next, end, complete) {
-      next(5);
-      complete();
-    });
+  it('pipes messages to child pipes', function(done) {
+    var p1 = PH.pipe();
+    var p2 = PH.pipe(p1);
+    var called = 0;
 
-    PH.pipe(s)
+    p2
     .onNext(function(x) {
-      assert.equal(x, 5);
-      pipeCalled++;
-    });
-    PH.pipe(s)
-    .onNext(function(x) {
-      assert.equal(x, 5);
-      pipeCalled++;
-    });
-    PH.pipe(s)
-    .onNext(function(x) {
-      assert.equal(x, 5);
-      pipeCalled++;
+      called++;
+      assert.equal(x, 1);
+    })
+    .onError(function(x) {
+      called++;
+      assert.equal(x, 2);
     })
     .onComplete(function() {
-      assert.equal(pipeCalled, 3);
+      assert.equal(called, 2);
       done();
     });
 
-    s.start();
+    p1.next(1);
+    p1.error(2);
+    p1.complete();
   });
 
-  it('does not pass values when not open', function(done) {
-    var s = PH.source(function(next, end, complete) {
-      setTimeout(function() {
-        next(5);
-        s.open();
-      }, 50);
-      setTimeout(function() {
-        next(6);
-      }, 100);
+  it('wont pipe any messages after complete', function(done) {
+    var p = PH.pipe();
+    var completeCalled = 0;
+
+    p
+    .onNext(function() {
+      assert.fail();
+    })
+    .onError(function() {
+      assert.fail();
+    })
+    .onComplete(function() {
+      if (completeCalled === 1) {
+        assert.fail();
+      } else {
+        completeCalled++;
+      }
     });
 
-    PH.pipe(s)
+    p.complete();
+    p.next(1);
+    p.error(2);
+
+    setTimeout(function() {
+      done();
+    }, 1);
+  });
+
+  it('can have multiple sources', function(done) {
+    var p1 = PH.pipe();
+    var p2 = PH.pipe();
+    var p3 = PH.pipe(p1, p2);
+    var called = 0;
+
+    p3
     .onNext(function(x) {
-      assert.equal(x, 6);
+      if (called === 0) {
+        assert.equal(x, 1);
+      } else {
+        assert.equal(x, 10);
+      }
+      called++;
+    })
+    .onError(function(x) {
+      called++;
+      assert.equal(x, 2);
+    })
+    .onComplete(function() {
+      assert.equal(called, 3);
       done();
     });
 
-    s.start();
-    s.close();
+    p1.next(1);
+    p2.next(10);
+    p2.error(2);
+    p1.complete();
+    p2.complete();
   });
 });
-
-// describe('pipes', function() {
-//   it('')
-
-// });
 

@@ -48,7 +48,7 @@ const pipe3 = PH.pipe(pipe1, pipe2); // pipe3 will now get messages from pipe1 a
 
 ## Async Piped to Async
 
-When you want to listen to a pipe's events and trigger another async event, you can use `reroute`. This effectively breaks the pipe chain and puts the responsibility on reconnecting it on you. Here is an example:
+When you want to listen to a pipe's events and trigger another async event, you can use `reroute`. This effectively breaks the pipe chain and puts the responsibility of reconnecting it on you. Here is an example:
 
 ```javascript
 var pipe1 = PH.pipe();
