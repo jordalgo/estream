@@ -1,7 +1,3 @@
-var TYPE_ERROR = 'error';
-var TYPE_NEXT = 'next';
-var TYPE_COMPLETE = 'complete';
-
 var createPipe;
 
 function addPipe(state, pipe) {
@@ -10,29 +6,38 @@ function addPipe(state, pipe) {
   }
 }
 
-function _notify(state, message) {
-  if (message.type === TYPE_COMPLETE) {
-    if (state.sourceCount < 2) {
-      state.observers[message.type].forEach(function(o) {
-        o(message.value);
-      });
-      state.pipes.forEach(function(pipe) {
-        pipe[message.type](message.value);
-      });
-      state.pipes = [];
-      Object.keys(state.observers).forEach(function(key) {
-        state.observers[key] = [];
-      });
-    }
-    state.sourceCount--;
-  } else {
-    state.observers[message.type].forEach(function(o) {
-      o(message.value);
+function _next(state, value) {
+  state.observers.next.forEach(function(obs) {
+    obs(value);
+  });
+  state.pipes.forEach(function(pipe) {
+    pipe.next(value);
+  });
+}
+
+function _error(state, value) {
+  state.observers.error.forEach(function(obs) {
+    obs(value);
+  });
+  state.pipes.forEach(function(pipe) {
+    pipe.error(value);
+  });
+}
+
+function _complete(state, value) {
+  if (state.sourceCount < 2) {
+    state.observers.complete.forEach(function(o) {
+      o(value);
     });
     state.pipes.forEach(function(pipe) {
-      pipe[message.type](message.value);
+      pipe.complete(value);
+    });
+    state.pipes = [];
+    Object.keys(state.observers).forEach(function(key) {
+      state.observers[key] = [];
     });
   }
+  state.sourceCount--;
 }
 
 function addSource(source) {
@@ -45,22 +50,12 @@ function onAction(state, action, fn) {
   return this;
 }
 
-function pipeMessage(type, value) {
-  this._notify({
-    type: type,
-    value: value
-  });
-}
-
 // Pipe Utils
 
 function map(state, fn) {
   var p = createPipe(this);
   p.next = function(value) {
-    this._notify({
-      value: fn(value),
-      type: TYPE_NEXT
-    });
+    this._next(fn(value));
   };
   return p;
 }
@@ -68,11 +63,8 @@ function map(state, fn) {
 function scan(state, fn, acc) {
   var p = createPipe(this);
   p.next = function(value) {
-    this._notify({
-      value: acc = fn(acc, value),
-      type: TYPE_NEXT
-    });
-  }
+    this._next(acc = fn(acc, value));
+  };
   return p;
 }
 
@@ -80,10 +72,7 @@ function filter(state, fn) {
   var p = createPipe(this);
   p.next = function(value) {
     if (fn(value)) {
-      this._notify({
-        value: value,
-        type: TYPE_NEXT
-      });
+      this._next(value);
     }
   };
   return p;
@@ -92,8 +81,8 @@ function filter(state, fn) {
 function collect(state, count) {
   var p = createPipe(this);
   var history = [];
-  p._notifyPre = p._notify;
-  p._notify = function(message) {
+  p._nextPre = p._next;
+  p._next = function(message) {
     history.push(message);
     if (count) {
       if (count > 1) {
@@ -105,9 +94,9 @@ function collect(state, count) {
   };
   p.drain = function() {
     history.forEach(function(message) {
-      p._notifyPre(message);
+      p._nextPre(message);
     });
-    p._notify = p._notifyPre;
+    p._next = p._nextPre;
     history = [];
   };
   return p;
@@ -115,13 +104,13 @@ function collect(state, count) {
 
 function take(state, count) {
   var p = createPipe(this);
-  p._notifyPre = p._notify;
-  p._notify = function(message) {
+  p._nextPre = p._next;
+  p._next = function(message) {
     if (count > 0) {
-      p._notifyPre(message);
+      p._nextPre(message);
       count--;
     } else {
-      p._notify = function() {};
+      p._next = function() {};
     }
   };
   return p;
@@ -133,7 +122,7 @@ function reroute(fn) {
   return p;
 }
 
-function createPipe() {
+createPipe = function() {
   var p = function() {};
   var sources = Array.prototype.slice.call(arguments);
   sources.forEach(function(source) {
@@ -150,16 +139,18 @@ function createPipe() {
   };
 
   // Private
-  p._notify = _notify.bind(p, state);
+  p._next = _next.bind(p, state);
+  p._error = _error.bind(p, state);
+  p._complete = _complete.bind(p, state);
 
   // Public API
-  p.onNext = onAction.bind(p, state, TYPE_NEXT);
-  p.onError = onAction.bind(p, state, TYPE_ERROR);
-  p.onComplete = onAction.bind(p, state, TYPE_COMPLETE);
+  p.next = p._next;
+  p.error = p._error;
+  p.complete = p._complete;
 
-  p.next = pipeMessage.bind(p, TYPE_NEXT);
-  p.error = pipeMessage.bind(p, TYPE_ERROR);
-  p.complete = pipeMessage.bind(p, TYPE_COMPLETE);
+  p.onNext = onAction.bind(p, state, 'next');
+  p.onError = onAction.bind(p, state, 'error');
+  p.onComplete = onAction.bind(p, state, 'complete');
 
   p.map = map.bind(p, state);
   p.scan = scan.bind(p, state);
@@ -172,7 +163,7 @@ function createPipe() {
   p.addSource = addSource.bind(p);
 
   return p;
-}
+};
 
 
 module.exports = {
