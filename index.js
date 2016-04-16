@@ -116,6 +116,16 @@ function take(state, count) {
   return p;
 }
 
+function completeOnError() {
+  var p = createPipe(this);
+  p.preError = p.error;
+  p.error = function() {
+    p.preError.apply(p, arguments);
+    p.complete();
+  };
+  return p;
+}
+
 function reroute(fn) {
   var p = createPipe();
   fn(this, p);
@@ -159,6 +169,7 @@ createPipe = function() {
   p.take = take.bind(p, state);
   p.reroute = reroute.bind(p);
 
+  p.completeOnError = completeOnError.bind(p);
   p.addPipe = addPipe.bind(null, state);
   p.addSource = addSource.bind(p);
 

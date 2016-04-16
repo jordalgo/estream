@@ -114,5 +114,32 @@ describe('pipe', function() {
     p1.complete();
     p2.complete();
   });
+
+  it('has a complete on error method', function(done) {
+    var p1 = PH.pipe();
+    var errorCalled;
+    var completeCalled;
+
+    p1
+    .completeOnError()
+    .onNext(function() {
+      assert.fail('onNext called');
+    })
+    .onError(function() {
+      errorCalled = true;
+    })
+    .onComplete(function() {
+      assert.equal(errorCalled, true);
+      completeCalled = true;
+    });
+
+    p1.error();
+    p1.next(1);
+
+    setTimeout(function() {
+      assert.equal(completeCalled, true);
+      done();
+    }, 10);
+  });
 });
 
