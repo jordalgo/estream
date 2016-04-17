@@ -18,10 +18,10 @@ describe('pipe', function() {
   it('has a error and onError', function(done) {
     var p = PH.pipe();
     p.onError(function(x) {
-      assert.equal(x, 'error');
+      assert.equal(x.message, 'error');
       done();
     });
-    p.error('error');
+    p.error(new Error('error'));
   });
 
   it('has a complete and onComplete', function(done) {
@@ -44,7 +44,7 @@ describe('pipe', function() {
     })
     .onError(function(x) {
       called++;
-      assert.equal(x, 2);
+      assert.equal(x.message, 'error');
     })
     .onComplete(function() {
       assert.equal(called, 2);
@@ -52,7 +52,7 @@ describe('pipe', function() {
     });
 
     p1.next(1);
-    p1.error(2);
+    p1.error(new Error('error'));
     p1.complete();
   });
 
@@ -77,7 +77,7 @@ describe('pipe', function() {
 
     p.complete();
     p.next(1);
-    p.error(2);
+    p.error(new Error('error'));
 
     setTimeout(function() {
       done();
@@ -101,7 +101,7 @@ describe('pipe', function() {
     })
     .onError(function(x) {
       called++;
-      assert.equal(x, 2);
+      assert.equal(x.message, 'error');
     })
     .onComplete(function() {
       assert.equal(called, 3);
@@ -110,9 +110,23 @@ describe('pipe', function() {
 
     p1.next(1);
     p2.next(10);
-    p2.error(2);
+    p2.error(new Error('error'));
     p1.complete();
     p2.complete();
+  });
+
+  it('has a map method', function(done) {
+    var p1 = PH.pipe();
+    var add1 = function(val) { return val + 1; };
+
+    p1
+    .map(add1)
+    .onNext(function(x) {
+      assert.equal(x, 5);
+      done();
+    });
+
+    p1.next(4);
   });
 
   it('has a complete on error method', function(done) {
@@ -133,13 +147,40 @@ describe('pipe', function() {
       completeCalled = true;
     });
 
-    p1.error();
+    p1.error(new Error('error'));
     p1.next(1);
 
     setTimeout(function() {
       assert.equal(completeCalled, true);
       done();
     }, 10);
+  });
+
+  it('has a reroute method', function(done) {
+    var p = PH.pipe();
+    var errorCalled;
+
+    p
+    .reroute(function(parentPipe, childPipe) {
+      parentPipe.onNext(function() {
+        setTimeout(function() {
+          childPipe.next(5);
+        }, 50);
+        parentPipe.onError(childPipe.error.bind(childPipe));
+      });
+    })
+    .onNext(function(x) {
+      assert.equal(x, 5);
+      assert.equal(errorCalled, true);
+      done();
+    })
+    .onError(function(e) {
+      assert.equal(e.message, 'error');
+      errorCalled = true;
+    });
+
+    p.next(1);
+    p.error(new Error('error'));
   });
 });
 
