@@ -36,8 +36,8 @@ Pipes have the ability to transform (map, scan) values that pass through them. T
 Pipes can be easily chained, or connected, together. All of the transformation methods yield a new pipe that connects to the previous one. The previous pipe has a record of this new pipe and passes along next, error, and complete values to it. A pipe can have multiple pipes connected to it.
 
 ```javascript
-const pipe1 = PH.pipe();
-const pipe2 = PH.pipe();
+var pipe1 = PH.pipe();
+var pipe2 = PH.pipe();
 
 pipe1
 .map(add1) // this map creates a new pipe

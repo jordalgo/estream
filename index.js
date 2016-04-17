@@ -101,6 +101,43 @@ var pipe = {
     var p = createPipe();
     fn(this, p);
     return p;
+  },
+  take: function(count) {
+    var p = createPipe(this);
+    p._nextPre = p._next;
+    p._next = function(value) {
+      if (count > 0) {
+        p._nextPre(value);
+        count--;
+      } else {
+        p.complete();
+      }
+    };
+    return p;
+  },
+  collect: function(count) {
+    var p = createPipe(this);
+    var history = [];
+    p.next = function(value) {
+      history.push(value);
+      if (count) {
+        if (count > 1) {
+          count--;
+        } else {
+          p.drain();
+        }
+      }
+    };
+    p.drain = function() {
+      history.forEach(function(value) {
+        p._next(value);
+      });
+      p.next = function(value) {
+        p._next(value);
+      };
+      history = [];
+    };
+    return p;
   }
 };
 
