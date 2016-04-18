@@ -4,7 +4,7 @@ var curryN = require('ramda/src/curryN');
 /**
  * Returns a Pipe that maps next values.
  *
- * __Signature__: `(b -> c) -> Pipe -> Pipe
+ * __Signature__: `(a -> b) -> Pipe a -> Pipe b
  *
  * @name map
  * @param {Function} fn - the mapping function
@@ -34,7 +34,7 @@ function map(fn, parentPipe) {
 /**
  * Returns a Pipe that scans next values.
  *
- * __Signature__: `(a -> b -> c) -> a -> Pipe -> Pipe
+ * __Signature__: `(b -> a -> c) -> b -> Pipe a -> Pipe c
  *
  * @name scan
  * @param {Function} fn - the mapping function
@@ -62,12 +62,28 @@ function scan(fn, acc, parentPipe) {
   return p;
 }
 
+/**
+ * Returns a Pipe that filters next values.
+ *
+ * __Signature__: `(a -> Boolean) -> Pipe a -> Pipe a
+ *
+ * @name scan
+ * @param {Function} fn - the filtering function
+ * @param {pipe} parentPipe - the parent pipe
+ * @return {pipe} the pipe with the filtered next values.
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * var mPipe = pipe1.filter(isEven);
+ * // or
+ * var mPipe = PH.filter(isEvent, pipe1);
+ */
 function filter(fn, parentPipe) {
   var p = createPipe(parentPipe);
   p.next = function(value) {
     try {
       if (fn(value)) {
-        this.next(value);
+        this._next(value);
       }
     } catch (e) {
       this.error(e);
