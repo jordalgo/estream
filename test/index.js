@@ -1,6 +1,8 @@
 var assert = require('assert');
 var PH = require('../index')();
 
+var sum = function(acc, value) { return acc + value; };
+
 describe('pipe', function() {
   it('can create a pipe', function() {
     assert.equal(typeof PH.pipe, 'function');
@@ -181,6 +183,56 @@ describe('pipe', function() {
 
     p.next(1);
     p.error(new Error('error'));
+  });
+
+  describe('scan', function() {
+    it('reduces next values', function(done) {
+      var p = PH.pipe();
+      var called = 0;
+
+      p.scan(sum, 5).onNext(function(x) {
+        if (called === 0) {
+          assert.equal(x, 10);
+          called++;
+        } else {
+          assert.equal(x, 20);
+          done();
+        }
+      });
+
+      p.next(5);
+      p.next(10);
+    });
+
+    it('is exported as a function', function(done) {
+      var p = PH.pipe();
+      var called = 0;
+
+      PH.scan(sum, 5, p).onNext(function(x) {
+        if (called === 0) {
+          assert.equal(x, 10);
+          called++;
+        } else {
+          assert.equal(x, 20);
+          done();
+        }
+      });
+
+      p.next(5);
+      p.next(10);
+    });
+
+    it('catches errors', function(done) {
+      var p = PH.pipe();
+      var sumError = function() { throw new Error('error'); };
+
+      p.scan(sumError, 0).onError(function(e) {
+        assert.equal(e.message, 'error');
+        done();
+      });
+
+      p.next(10);
+    });
   });
 });
 
