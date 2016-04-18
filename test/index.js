@@ -1,5 +1,5 @@
 var assert = require('assert');
-var PH = require('../index');
+var PH = require('../index')();
 
 describe('pipe', function() {
   it('can create a pipe', function() {

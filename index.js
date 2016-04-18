@@ -1,7 +1,22 @@
 var objectAssign = require('object-assign');
 var curryN = require('ramda/src/curryN');
-// var _ = require('ramda/src/__');
 
+/**
+ * Returns a Pipe that maps next values.
+ *
+ * __Signature__: `(b -> c) -> Pipe -> Pipe
+ *
+ * @name map
+ * @param {Function} fn - the mapping function
+ * @param {pipe} parentPipe - the parent pipe
+ * @return {pipe} the pipe with the mapped next values
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * var mPipe = pipe1.map(add1);
+ * // or
+ * var mPipe = PH.map(add1, pipe1);
+ */
 function map(fn, parentPipe) {
   var p = createPipe(parentPipe);
   p.next = function(value) {
@@ -190,6 +205,7 @@ var pipe = {
   }
 };
 
+
 function createPipe() {
   var sources = Array.prototype.slice.call(arguments);
   if (Array.isArray(sources[0])) {
@@ -212,12 +228,25 @@ function createPipe() {
   return p;
 }
 
-module.exports = {
-  pipe: createPipe,
-  map: curryN(2, map),
-  scan: curryN(3, scan),
-  filter: curryN(2, filter),
-  take: curryN(2, take),
-  collect: curryN(2, collect),
-  completeOnError: completeOnError
+module.exports = function(addedMethods) {
+  if (addedMethods) {
+    // Add methods to the pipe object for chainability.
+    addedMethods.forEach(function(method) {
+      pipe[method.name] = function() {
+        var args = Array.prototype.slice.call(arguments).concat([this]);
+        return method.fn.apply(null, args);
+      };
+    });
+  }
+
+  return {
+    pipe: createPipe,
+    map: curryN(2, map),
+    scan: curryN(3, scan),
+    filter: curryN(2, filter),
+    take: curryN(2, take),
+    collect: curryN(2, collect),
+    completeOnError: completeOnError
+  };
 };
+
