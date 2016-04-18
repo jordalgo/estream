@@ -1,5 +1,5 @@
 var assert = require('assert');
-var PH = require('../index')();
+var PH = require('../index');
 
 var sum = function(acc, value) { return acc + value; };
 var isGt10 = function(a) { return a > 10; };
@@ -186,12 +186,12 @@ describe('pipe', function() {
     p.error(new Error('error'));
   });
 
-  it('adds passed methods to the pipe prototype', function(done) {
-    var PH2 = require('../index')([{
+  it('has an addPipeMethods', function(done) {
+    PH.addPipeMethods([{
       name: 'collect',
-      fn: require('../modules/collect')
+      fn: require('../modules/collect')(PH.pipe)
     }]);
-    var p = PH2.pipe();
+    var p = PH.pipe();
     assert.equal(typeof p.collect, 'function');
 
     // make sure collect works

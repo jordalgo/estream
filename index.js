@@ -251,24 +251,23 @@ function createPipe() {
   return p;
 }
 
-module.exports = function(addedMethods) {
-  if (addedMethods) {
-    // Add methods to the pipe object for chainability.
-    addedMethods.forEach(function(method) {
-      pipe[method.name] = function() {
-        var args = Array.prototype.slice.call(arguments).concat([this]);
-        return method.fn.apply(null, args);
-      };
-    });
-  }
+function addPipeMethods(addedMethods) {
+  // Add methods to the pipe object for chainability.
+  addedMethods.forEach(function(method) {
+    pipe[method.name] = function() {
+      var args = Array.prototype.slice.call(arguments).concat([this]);
+      return method.fn.apply(null, args);
+    };
+  });
+}
 
-  return {
-    pipe: createPipe,
-    map: curryN(2, map),
-    scan: curryN(3, scan),
-    filter: curryN(2, filter),
-    take: curryN(2, take),
-    completeOnError: completeOnError
-  };
+module.exports = {
+  pipe: createPipe,
+  map: curryN(2, map),
+  scan: curryN(3, scan),
+  filter: curryN(2, filter),
+  take: curryN(2, take),
+  completeOnError: completeOnError,
+  addPipeMethods: addPipeMethods
 };
 

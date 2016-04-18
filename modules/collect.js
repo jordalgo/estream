@@ -1,5 +1,5 @@
-var PH = require('../index')();
 var curryN = require('ramda/src/curryN');
+var createPipe;
 
 /**
  * Returns a Pipe that collects next values.
@@ -7,7 +7,8 @@ var curryN = require('ramda/src/curryN');
  * __Signature__: `Int|Boolean -> Pipe a -> Pipe a
  *
  * @name collect
- * @param {Integer|Boolean} count - the amount of next values to collect. If false, collect them all.
+ * @param {Integer|Boolean} count - the amount of next values to collect.
+ *  If false, collect them all.
  * @param {pipe} parentPipe - the parent pipe
  * @return {pipe} the pipe with the collected next values
  *
@@ -16,7 +17,7 @@ var curryN = require('ramda/src/curryN');
  * var mPipe = PH.collect(false, pipe1);
  */
 function collect(count, parentPipe) {
-  var p = PH.pipe(parentPipe);
+  var p = createPipe(parentPipe);
   var history = [];
   p.next = function(value) {
     history.push(value);
@@ -39,5 +40,11 @@ function collect(count, parentPipe) {
   return p;
 }
 
-module.exports = curryN(2, collect);
-
+module.exports = function(createPipeParam) {
+  if (!createPipeParam) {
+    throw new Error('Piping Hot module functions need the createPipe' +
+                    'function passed in to work. See docs!');
+  }
+  createPipe = createPipeParam;
+  return curryN(2, collect);
+};
