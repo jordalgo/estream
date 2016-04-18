@@ -2,9 +2,179 @@ var objectAssign = require('object-assign');
 var curryN = require('ramda/src/curryN');
 
 /**
+ * Pass a next value down the pipe.
+ *
+ * __Signature__: `a -> undefined`
+ *
+ * @name next
+ * @param {*} value - the value
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * pipe1.next(5);
+ */
+function next(value) {
+  this._next(value);
+}
+
+/**
+ * Pass an error down the pipe.
+ *
+ * __Signature__: `Error -> undefined`
+ *
+ * @name error
+ * @param {Error} err - the error
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * pipe1.error(new Error('something bad happened'));
+ */
+function error(err) {
+  this._error(err);
+}
+
+/**
+ * Pass a complete value down the pipe.
+ * Once a complete is passed a pipe does not pass any more
+ * next or error values and it severs all it's child pipes
+ * and observing functions.
+ *
+ * __Signature__: `a -> undefined`
+ *
+ * @name complete
+ * @param {*} value - the value
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * pipe1.complete('The end');
+ */
+function complete(value) {
+  this._complete(value);
+}
+
+/**
+ * Add a child pipe to a parent
+ *
+ * __Signature__: `Pipe b -> Pipe a`
+ *
+ * @name addPipe
+ * @param {pipe} p - the pipe to add as a child pipe
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * var pipe2 = PH.pipe();
+ * pipe1.addPipe(pipe2);
+ */
+function addPipe(p) {
+  if (this.pipes.indexOf(p) === -1) {
+    this.pipes.push(p);
+  }
+  return this;
+}
+
+/**
+ * Creates a new pipe with x amount of parent-pipes/sources.
+ *
+ * __Signature__: `[Pipe a] -> Pipe b`
+ *
+ * @name addSources
+ * @param {pipe} args - a list of pipes
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * var pipe2 = PH.pipe();
+ * var pipe3 = PH.pipe();
+ * var pipe4 = pipe1.addSources(pipe2, pipe3);
+ */
+function addSources() {
+  var sources = [this].concat(Array.prototype.slice.call(arguments));
+  return createPipe(sources);
+}
+
+/**
+ * Ads an observer to a pipe's next values
+ *
+ * __Signature__: `(a -> *) -> Pipe a`
+ *
+ * @name onNext
+ * @param {Function} fn - the observing function
+ * @return {pipe}
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * pipe1.onNext(console.log.bind(console));
+ */
+function onNext(fn) {
+  this.observers.next.push(fn);
+  return this;
+}
+
+/**
+ * Ads an observer to a pipe's errors
+ *
+ * __Signature__: `(a -> *) -> Pipe a`
+ *
+ * @name onError
+ * @param {Function} fn - the observing function
+ * @return {pipe}
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * pipe1.onError(console.log.bind(console));
+ */
+function onError(fn) {
+  this.observers.error.push(fn);
+  return this;
+}
+
+/**
+ * Ads an observer to a pipe's complete
+ *
+ * __Signature__: `(a -> *) -> Pipe a`
+ *
+ * @name onComplete
+ * @param {Function} fn - the observing function
+ * @return {pipe}
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * pipe1.onComplete(console.log.bind(console));
+ */
+function onComplete(fn) {
+  this.observers.complete.push(fn);
+  return this;
+}
+
+/**
+ * Reroutes a pipe to a passed function.
+ * This effectively breaks a pipe chain
+ * and puts the responsiblity of reconnecting it
+ * on the app developer.
+ *
+ * __Signature__: `(Pipe a -> Pipe b -> *) -> Pipe b`
+ *
+ * @name reroute
+ * @param {Function} fn - the function that takes the parent and new pipe
+ * @return {pipe}
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * pipe1.reroute(function(parentPipe, childPipe) {
+ *  parentPipe.onNext(childPipe.next);
+ *  parentPipe.onError(childPipe.error);
+ *  parentPipe.onComplete(childPipe.complete);
+ * });
+ */
+function reroute(fn) {
+  var p = createPipe();
+  fn(this, p);
+  return p;
+}
+
+/**
  * Returns a Pipe that maps next values.
  *
- * __Signature__: `(a -> b) -> Pipe a -> Pipe b
+ * __Signature__: `(a -> b) -> Pipe a -> Pipe b`
  *
  * @name map
  * @param {Function} fn - the mapping function
@@ -34,7 +204,7 @@ function map(fn, parentPipe) {
 /**
  * Returns a Pipe that scans next values.
  *
- * __Signature__: `(b -> a -> c) -> b -> Pipe a -> Pipe c
+ * __Signature__: `(b -> a -> c) -> b -> Pipe a -> Pipe c`
  *
  * @name scan
  * @param {Function} fn - the mapping function
@@ -65,7 +235,7 @@ function scan(fn, acc, parentPipe) {
 /**
  * Returns a Pipe that filters next values.
  *
- * __Signature__: `(a -> Boolean) -> Pipe a -> Pipe a
+ * __Signature__: `(a -> Boolean) -> Pipe a -> Pipe a`
  *
  * @name filter
  * @param {Function} fn - the filtering function
@@ -95,7 +265,7 @@ function filter(fn, parentPipe) {
 /**
  * Returns a Pipe that takes x number of next values then completes.
  *
- * __Signature__: `Int -> Pipe a -> Pipe a
+ * __Signature__: `Int -> Pipe a -> Pipe a`
  *
  * @name take
  * @param {Integer} count - the number of next values to take
@@ -120,20 +290,31 @@ function take(count, parentPipe) {
   return p;
 }
 
-
+/**
+ * Returns a pipe that completes on any error.
+ *
+ * __Signature__: `Pipe a -> Pipe a`
+ *
+ * @name completeOnError
+ * @param {pipe} parentPipe - the parent pipe
+ * @return {pipe} the pipe that will complete on error
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * var mPipe = pipe1.completeOnError();
+ * // or
+ * var mPipe = PH.completeOnError(pipe1);
+ */
 function completeOnError(parentPipe) {
   var p = createPipe(parentPipe);
-  p.error = function(error) {
-    p._error(error);
+  p.error = function(err) {
+    p._error(err);
     p.complete();
   };
   return p;
 }
 
 var pipe = {
-  next: function(value) {
-    this._next(value);
-  },
   _next: function(value) {
     if (this._isComplete) {
       return;
@@ -145,25 +326,19 @@ var pipe = {
       p.next(value);
     });
   },
-  error: function(error) {
-    this._error(error);
-  },
-  _error: function(error) {
+  _error: function(err) {
     if (this._isComplete) {
       return;
     }
     this.observers.error.forEach(function(observer) {
-      observer(error);
+      observer(err);
     });
     this.pipes.forEach(function(p) {
-      p.error(error);
+      p.error(err);
     });
     if (!this.pipes.length && !this.observers.error.length) {
-      throw error;
+      throw err;
     }
-  },
-  complete: function(value) {
-    this._complete(value);
   },
   _complete: function(value) {
     if (this._isComplete) {
@@ -184,28 +359,15 @@ var pipe = {
     }
     this.sourceCount--;
   },
-  addPipe: function(p) {
-    if (this.pipes.indexOf(p) === -1) {
-      this.pipes.push(p);
-    }
-    return this;
-  },
-  addSources: function() {
-    var sources = [this].concat(Array.prototype.slice.call(arguments));
-    return createPipe(sources);
-  },
-  onNext: function(fn) {
-    this.observers.next.push(fn);
-    return this;
-  },
-  onError: function(fn) {
-    this.observers.error.push(fn);
-    return this;
-  },
-  onComplete: function(fn) {
-    this.observers.complete.push(fn);
-    return this;
-  },
+  next: next,
+  error: error,
+  complete: complete,
+  addPipe: addPipe,
+  addSources: addSources,
+  onNext: onNext,
+  onError: onError,
+  onComplete: onComplete,
+  reroute: reroute,
   map: function(fn) {
     return map(fn, this);
   },
@@ -218,17 +380,24 @@ var pipe = {
   completeOnError: function() {
     return completeOnError(this);
   },
-  reroute: function(fn) {
-    var p = createPipe();
-    fn(this, p);
-    return p;
-  },
   take: function(count) {
     return take(count, this);
   }
 };
 
-
+/**
+ * Create a new pipe and update parent pipes if passed.
+ *
+ * __Signature__: `Pipe a -> Pipe b`
+ *
+ * @name createPipe
+ * @param {Pipe|Array} - an optional single or array of parent pipes
+ * @return {pipe} the pipe
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * var pipe2 = PH.pipe(pipe1);
+ */
 function createPipe() {
   var sources = Array.prototype.slice.call(arguments);
   if (Array.isArray(sources[0])) {
@@ -251,6 +420,20 @@ function createPipe() {
   return p;
 }
 
+/**
+ * Add methods to the base pipe object.
+ *
+ * __Signature__: `[Objects] -> undefined`
+ *
+ * @name addPipeMethods
+ * @param {Array} addedMethods - an array of objects
+ *
+ * @example
+ * var pipe1 = PH.addPipeMethods({
+ *  name: 'collect',
+ *  fn: require('piping-hot/modules/collect')(PH.pipe)
+ * });
+ */
 function addPipeMethods(addedMethods) {
   // Add methods to the pipe object for chainability.
   addedMethods.forEach(function(method) {

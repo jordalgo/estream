@@ -132,33 +132,6 @@ describe('pipe', function() {
     p1.next(4);
   });
 
-  it('has a complete on error method', function(done) {
-    var p1 = PH.pipe();
-    var errorCalled;
-    var completeCalled;
-
-    p1
-    .completeOnError()
-    .onNext(function() {
-      assert.fail('onNext called');
-    })
-    .onError(function() {
-      errorCalled = true;
-    })
-    .onComplete(function() {
-      assert.equal(errorCalled, true);
-      completeCalled = true;
-    });
-
-    p1.error(new Error('error'));
-    p1.next(1);
-
-    setTimeout(function() {
-      assert.equal(completeCalled, true);
-      done();
-    }, 10);
-  });
-
   it('has a reroute method', function(done) {
     var p = PH.pipe();
     var errorCalled;
@@ -345,6 +318,35 @@ describe('pipe', function() {
 
       p.next(5);
       p.next(3);
+    });
+  });
+
+  describe('completeOnError', function() {
+    it('has a completes on error', function(done) {
+      var p1 = PH.pipe();
+      var errorCalled;
+      var completeCalled;
+
+      p1
+      .completeOnError()
+      .onNext(function() {
+        assert.fail('onNext called');
+      })
+      .onError(function() {
+        errorCalled = true;
+      })
+      .onComplete(function() {
+        assert.equal(errorCalled, true);
+        completeCalled = true;
+      });
+
+      p1.error(new Error('error'));
+      p1.next(1);
+
+      setTimeout(function() {
+        assert.equal(completeCalled, true);
+        done();
+      }, 10);
     });
   });
 });

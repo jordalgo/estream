@@ -16,7 +16,7 @@
   "scripts": {
     "lint": "eslint test/ lib/",
     "test": "mocha -R spec test/*.js",
-    "docs": "documentation build -f md lib/* > API.md"
+    "docs": "documentation build -f md index.js > API.md"
   },
   "repository": {
     "type": "git",
