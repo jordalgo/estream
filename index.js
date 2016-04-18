@@ -67,7 +67,7 @@ function scan(fn, acc, parentPipe) {
  *
  * __Signature__: `(a -> Boolean) -> Pipe a -> Pipe a
  *
- * @name scan
+ * @name filter
  * @param {Function} fn - the filtering function
  * @param {pipe} parentPipe - the parent pipe
  * @return {pipe} the pipe with the filtered next values.
@@ -92,6 +92,22 @@ function filter(fn, parentPipe) {
   return p;
 }
 
+/**
+ * Returns a Pipe that takes x number of next values then completes.
+ *
+ * __Signature__: `Int -> Pipe a -> Pipe a
+ *
+ * @name take
+ * @param {Integer} count - the number of next values to take
+ * @param {pipe} parentPipe - the parent pipe
+ * @return {pipe} the pipe that will only accept x number of next values
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * var mPipe = pipe1.take(3);
+ * // or
+ * var mPipe = PH.take(3, pipe1);
+ */
 function take(count, parentPipe) {
   var p = createPipe(parentPipe);
   p.next = function(value) {
@@ -231,10 +247,10 @@ var pipe = {
     return p;
   },
   take: function(count) {
-    return take(count);
+    return take(count, this);
   },
   collect: function(count) {
-    return collect(count);
+    return collect(count, this);
   }
 };
 

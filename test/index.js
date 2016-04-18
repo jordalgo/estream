@@ -255,7 +255,7 @@ describe('pipe', function() {
       var p = PH.pipe();
       var called = 0;
 
-      p.filter(isGt10).onNext(function(x) {
+      PH.filter(isGt10, p).onNext(function(x) {
         assert.equal(x, 11);
         assert.equal(called, 0);
         done();
@@ -275,6 +275,48 @@ describe('pipe', function() {
       });
 
       p.next(10);
+    });
+  });
+
+  describe('take', function() {
+    it('accepts x number of next values', function(done) {
+      var p = PH.pipe();
+      var called = false;
+
+      p.take(1)
+      .onNext(function(x) {
+        assert.equal(x, 5);
+        assert.equal(called, false);
+        called = true;
+      })
+      .onComplete(function() {
+        setTimeout(function() {
+          done();
+        }, 10);
+      });
+
+      p.next(5);
+      p.next(3);
+    });
+
+    it('is exported as a function', function(done) {
+      var p = PH.pipe();
+      var called = false;
+
+      PH.take(1, p)
+      .onNext(function(x) {
+        assert.equal(x, 5);
+        assert.equal(called, false);
+        called = true;
+      })
+      .onComplete(function() {
+        setTimeout(function() {
+          done();
+        }, 10);
+      });
+
+      p.next(5);
+      p.next(3);
     });
   });
 });
