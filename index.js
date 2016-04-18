@@ -120,29 +120,6 @@ function take(count, parentPipe) {
   return p;
 }
 
-function collect(count, parentPipe) {
-  var p = createPipe(parentPipe);
-  var history = [];
-  p.next = function(value) {
-    history.push(value);
-    if (count) {
-      count--;
-      if (count === 0) {
-        p.drain();
-      }
-    }
-  };
-  p.drain = function() {
-    history.forEach(function(value) {
-      p._next(value);
-    });
-    p.next = function(value) {
-      p._next(value);
-    };
-    history = false;
-  };
-  return p;
-}
 
 function completeOnError(parentPipe) {
   var p = createPipe(parentPipe);
@@ -248,9 +225,6 @@ var pipe = {
   },
   take: function(count) {
     return take(count, this);
-  },
-  collect: function(count) {
-    return collect(count, this);
   }
 };
 
@@ -294,7 +268,6 @@ module.exports = function(addedMethods) {
     scan: curryN(3, scan),
     filter: curryN(2, filter),
     take: curryN(2, take),
-    collect: curryN(2, collect),
     completeOnError: completeOnError
   };
 };

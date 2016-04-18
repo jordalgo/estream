@@ -186,6 +186,34 @@ describe('pipe', function() {
     p.error(new Error('error'));
   });
 
+  it('adds passed methods to the pipe prototype', function(done) {
+    var PH2 = require('../index')([{
+      name: 'collect',
+      fn: require('../modules/collect')
+    }]);
+    var p = PH2.pipe();
+    assert.equal(typeof p.collect, 'function');
+
+    // make sure collect works
+    var called = 0;
+    p.collect(2)
+    .onNext(function(x) {
+      if (called === 0) {
+        assert.equal(x, 1);
+        called++;
+      } else {
+        assert.equal(x, 2);
+        done();
+      }
+    });
+
+    p.next(1);
+    setTimeout(function() {
+      assert.equal(called, 0);
+      p.next(2);
+    }, 10);
+  });
+
   describe('scan', function() {
     it('reduces next values', function(done) {
       var p = PH.pipe();
