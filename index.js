@@ -1,4 +1,93 @@
 var objectAssign = require('object-assign');
+var curryN = require('ramda/src/curryN');
+// var _ = require('ramda/src/__');
+
+function map(fn, parentPipe) {
+  var p = createPipe(parentPipe);
+  p.next = function(value) {
+    var mValue;
+    try {
+      mValue = fn(value);
+      this._next(mValue);
+    } catch (e) {
+      this._error(e);
+    }
+  };
+  return p;
+}
+
+function scan(fn, acc, parentPipe) {
+  var p = createPipe(parentPipe);
+  p.next = function(value) {
+    var accValue;
+    try {
+      accValue = fn(acc, value);
+      this.next(acc = accValue);
+    } catch (e) {
+      this.error(e);
+    }
+  };
+  return p;
+}
+
+function filter(fn, parentPipe) {
+  var p = createPipe(parentPipe);
+  p.next = function(value) {
+    try {
+      if (fn(value)) {
+        this.next(value);
+      }
+    } catch (e) {
+      this.error(e);
+    }
+  };
+  return p;
+}
+
+function take(count, parentPipe) {
+  var p = createPipe(parentPipe);
+  p.next = function(value) {
+    p._next(value);
+    count--;
+    if (count === 0) {
+      p.complete();
+    }
+  };
+  return p;
+}
+
+function collect(count, parentPipe) {
+  var p = createPipe(parentPipe);
+  var history = [];
+  p.next = function(value) {
+    history.push(value);
+    if (count) {
+      count--;
+      if (count === 0) {
+        p.drain();
+      }
+    }
+  };
+  p.drain = function() {
+    history.forEach(function(value) {
+      p._next(value);
+    });
+    p.next = function(value) {
+      p._next(value);
+    };
+    history = false;
+  };
+  return p;
+}
+
+function completeOnError(parentPipe) {
+  var p = createPipe(parentPipe);
+  p.error = function(error) {
+    p._error(error);
+    p.complete();
+  };
+  return p;
+}
 
 var pipe = {
   next: function(value) {
@@ -77,25 +166,16 @@ var pipe = {
     return this;
   },
   map: function(fn) {
-    var p = createPipe(this);
-    p.next = function(value) {
-      var mValue;
-      try {
-        mValue = fn(value);
-        this._next(mValue);
-      } catch (e) {
-        this._error(e);
-      }
-    };
-    return p;
+    return map(fn, this);
+  },
+  scan: function(fn, acc) {
+    return scan(fn, acc, this);
+  },
+  filter: function(fn) {
+    return filter(fn, this);
   },
   completeOnError: function() {
-    var p = createPipe(this);
-    p.error = function(error) {
-      p._error(error);
-      p.complete();
-    };
-    return p;
+    return completeOnError(this);
   },
   reroute: function(fn) {
     var p = createPipe();
@@ -103,41 +183,10 @@ var pipe = {
     return p;
   },
   take: function(count) {
-    var p = createPipe(this);
-    p._nextPre = p._next;
-    p._next = function(value) {
-      if (count > 0) {
-        p._nextPre(value);
-        count--;
-      } else {
-        p.complete();
-      }
-    };
-    return p;
+    return take(count);
   },
   collect: function(count) {
-    var p = createPipe(this);
-    var history = [];
-    p.next = function(value) {
-      history.push(value);
-      if (count) {
-        if (count > 1) {
-          count--;
-        } else {
-          p.drain();
-        }
-      }
-    };
-    p.drain = function() {
-      history.forEach(function(value) {
-        p._next(value);
-      });
-      p.next = function(value) {
-        p._next(value);
-      };
-      history = [];
-    };
-    return p;
+    return collect(count);
   }
 };
 
@@ -155,6 +204,7 @@ function createPipe() {
       complete: []
     }
   });
+
   sources.forEach(function(source) {
     source.addPipe(p);
   });
@@ -163,5 +213,11 @@ function createPipe() {
 }
 
 module.exports = {
-  pipe: createPipe
+  pipe: createPipe,
+  map: curryN(2, map),
+  scan: curryN(3, scan),
+  filter: curryN(2, filter),
+  take: curryN(2, take),
+  collect: curryN(2, collect),
+  completeOnError: completeOnError
 };

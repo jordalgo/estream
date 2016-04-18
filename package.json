@@ -4,7 +4,8 @@
   "description": "A javascript library with a simplified take on hot observables and streams.",
   "main": "index.js",
   "dependencies": {
-    "object-assign": "^4.0.1"
+    "object-assign": "^4.0.1",
+    "ramda": "^0.21.0"
   },
   "devDependencies": {
     "documentation": "^4.0.0-beta2",
