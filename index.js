@@ -18,6 +18,24 @@ function next(value) {
 }
 
 /**
+ * Notify observers and childpipes of a next value.
+ *
+ * @name _next
+ * @private
+ */
+function _next(value) {
+  if (this._isComplete) {
+    return;
+  }
+  this.observers.next.forEach(function(observer) {
+    observer(value);
+  });
+  this.pipes.forEach(function(p) {
+    p.next(value);
+  });
+}
+
+/**
  * Pass an error down the pipe.
  *
  * __Signature__: `Error -> undefined`
@@ -31,6 +49,27 @@ function next(value) {
  */
 function error(err) {
   this._error(err);
+}
+
+/**
+ * Notify observers and childpipes of an error.
+ *
+ * @name _error
+ * @private
+ */
+function _error(err) {
+  if (this._isComplete) {
+    return;
+  }
+  this.observers.error.forEach(function(observer) {
+    observer(err);
+  });
+  this.pipes.forEach(function(p) {
+    p.error(err);
+  });
+  if (!this.pipes.length && !this.observers.error.length) {
+    throw err;
+  }
 }
 
 /**
@@ -50,6 +89,32 @@ function error(err) {
  */
 function complete(value) {
   this._complete(value);
+}
+
+/**
+ * Notify observers and childpipes of a complete.
+ *
+ * @name _complete
+ * @private
+ */
+function _complete(value) {
+  if (this._isComplete) {
+    return;
+  }
+  if (this.sourceCount < 2) {
+    this.observers.complete.forEach(function(observer) {
+      observer(value);
+    });
+    this.pipes.forEach(function(p) {
+      p.complete(value);
+    });
+    this.pipes = [];
+    Object.keys(this.observers).forEach(function(key) {
+      this.observers[key] = [];
+    }.bind(this));
+    this._isComplete = true;
+  }
+  this.sourceCount--;
 }
 
 /**
@@ -315,50 +380,9 @@ function completeOnError(parentPipe) {
 }
 
 var pipe = {
-  _next: function(value) {
-    if (this._isComplete) {
-      return;
-    }
-    this.observers.next.forEach(function(observer) {
-      observer(value);
-    });
-    this.pipes.forEach(function(p) {
-      p.next(value);
-    });
-  },
-  _error: function(err) {
-    if (this._isComplete) {
-      return;
-    }
-    this.observers.error.forEach(function(observer) {
-      observer(err);
-    });
-    this.pipes.forEach(function(p) {
-      p.error(err);
-    });
-    if (!this.pipes.length && !this.observers.error.length) {
-      throw err;
-    }
-  },
-  _complete: function(value) {
-    if (this._isComplete) {
-      return;
-    }
-    if (this.sourceCount < 2) {
-      this.observers.complete.forEach(function(observer) {
-        observer(value);
-      });
-      this.pipes.forEach(function(p) {
-        p.complete(value);
-      });
-      this.pipes = [];
-      Object.keys(this.observers).forEach(function(key) {
-        this.observers[key] = [];
-      }.bind(this));
-      this._isComplete = true;
-    }
-    this.sourceCount--;
-  },
+  _next: _next,
+  _error: _error,
+  _complete: _complete,
   next: next,
   error: error,
   complete: complete,
