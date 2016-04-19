@@ -31,6 +31,43 @@ When you want to listen to a pipe's events and trigger another async event, you 
 
 ## Examples:
 
+Basic Example:
+```javascript
+var pipe1 = PH.pipe();
+
+pipe1.onNext(function(x) {
+  console.log('got a next', x);
+})
+.onError(function(err) {
+  console.log('got an error', err.message);
+})
+.onComplete(function() {
+  console.log('got a pipe completion');
+});
+
+pipe1.next(5);
+pipe1.error(new Error('boom'));
+pipe1.complete();
+```
+
+Chained Transformation:
+```javascript
+var pipe1 = PH.pipe();
+var add1 = function(x) { return x + 1; };
+var sum = function(acc, val) { retrun acc + val; };
+
+pipe1
+.map(add1) // creates a new pipe
+.scan(sum, 10) // creates a new pipe
+.onNext(function(x) {
+  console.log('got a next', x);
+})
+
+pipe1.next(5);
+// got a next 16
+```
+
+Pipe to Async Pipe (Rerouting):
 ```javascript
 var pipe1 = PH.pipe();
 
@@ -45,9 +82,11 @@ pipe1.reroute(function(parentPipe, childPipe) {
   parentPipe.onError(childPipe.error);
   parentPipe.onComplete(childPipe.complete);
 })
-.scan(sum)
-.map(add1)
 .onNext(console.log.bind(console));
+
+pipe1.next(10);
+
+// 20 after 1 second.
 ```
 
 ## Inspiration
