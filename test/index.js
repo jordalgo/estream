@@ -187,6 +187,44 @@ describe('pipe', function() {
     }, 10);
   });
 
+  describe('ap', function() {
+    it('applies a value to a pipe function', function(done) {
+      var p = PH.pipe();
+
+      p.ap(5).onNext(function(x) {
+        assert.equal(x, 6);
+        done();
+      });
+
+      p.next(function(x) { return x + 1; });
+    });
+
+    it('is exported as a function', function(done) {
+      var p = PH.pipe();
+
+      PH.ap(5, p).onNext(function(x) {
+        assert.equal(x, 6);
+        done();
+      });
+
+      p.next(function(x) { return x + 1; });
+    });
+
+    it('is catches errors', function(done) {
+      var p = PH.pipe();
+
+      PH.ap(5, p).onNext(function() {
+        assert.fail();
+      })
+      .onError(function(e) {
+        assert.equal(e.message, 'boom');
+        done();
+      });
+
+      p.next(function() { throw new Error('boom'); });
+    });
+  });
+
   describe('scan', function() {
     it('reduces next values', function(done) {
       var p = PH.pipe();

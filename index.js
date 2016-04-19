@@ -267,6 +267,37 @@ function map(fn, parentPipe) {
 }
 
 /**
+ * Returns a Pipe that applies a value to a next function
+ *
+ * __Signature__: `a -> Pipe (a -> b) -> Pipe b`
+ *
+ * @name ap
+ * @param {*} value - the value applied to the pipe function
+ * @param {pipe} parentPipe - the parent pipe
+ * @return {pipe} the pipe with the new value
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * var mPipe = pipe1.ap(1);
+ * // or
+ * var mPipe = PH.map(add1, pipe1);
+ * pipe1.next(function(x) { return x + 1; });
+ */
+function ap(value, parentPipe) {
+  var p = createPipe(parentPipe);
+  p.next = function(fnValue) {
+    var apValue;
+    try {
+      apValue = fnValue(value);
+      this._next(apValue);
+    } catch (e) {
+      this._error(e);
+    }
+  };
+  return p;
+}
+
+/**
  * Returns a Pipe that scans next values.
  *
  * __Signature__: `(b -> a -> c) -> b -> Pipe a -> Pipe c`
@@ -395,6 +426,9 @@ var pipe = {
   map: function(fn) {
     return map(fn, this);
   },
+  ap: function(value) {
+    return ap(value, this);
+  },
   scan: function(fn, acc) {
     return scan(fn, acc, this);
   },
@@ -471,6 +505,7 @@ function addPipeMethods(addedMethods) {
 module.exports = {
   pipe: createPipe,
   map: curryN(2, map),
+  ap: curryN(2, ap),
   scan: curryN(3, scan),
   filter: curryN(2, filter),
   take: curryN(2, take),
