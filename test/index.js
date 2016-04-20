@@ -48,6 +48,20 @@ describe('pipe', function() {
     p.error(new Error('error'));
   });
 
+  it('throws if you dont have an onError observer', function() {
+    var p = PH.pipe();
+
+    p.onNext(function() {
+      assert.fail();
+    });
+
+    try {
+      p.error(new Error('boom'));
+    } catch (e) {
+      assert.equal(e.message, 'boom');
+    }
+  });
+
   it('has a complete and onComplete', function(done) {
     var p = PH.pipe();
     p.onComplete(function() {
@@ -139,20 +153,6 @@ describe('pipe', function() {
     p2.complete();
   });
 
-  it('has a map method', function(done) {
-    var p1 = PH.pipe();
-    var add1 = function(val) { return val + 1; };
-
-    p1
-    .map(add1)
-    .onNext(function(x) {
-      assert.equal(x, 5);
-      done();
-    });
-
-    p1.next(4);
-  });
-
   it('has a reroute method', function(done) {
     var p = PH.pipe();
     var errorCalled;
@@ -208,6 +208,52 @@ describe('pipe', function() {
     }, 10);
   });
 
+  describe('map', function() {
+    it('maps a function over next values', function(done) {
+      var p1 = PH.pipe();
+      var add1 = function(val) { return val + 1; };
+
+      p1
+      .map(add1)
+      .onNext(function(x) {
+        assert.equal(x, 5);
+        done();
+      });
+
+      p1.next(4);
+    });
+
+    it('is exported as a function', function(done) {
+      var p1 = PH.pipe();
+      var add1 = function(val) { return val + 1; };
+
+      PH.map(add1, p1)
+      .onNext(function(x) {
+        assert.equal(x, 5);
+        done();
+      });
+
+      p1.next(4);
+    });
+
+    it('catches errors', function(done) {
+      var p1 = PH.pipe();
+      var throwError = function() { throw new Error('boom'); };
+
+      p1
+      .map(throwError)
+      .onNext(function() {
+        assert.fail();
+      })
+      .onError(function(e) {
+        assert.equal(e.message, 'boom');
+        done();
+      });
+
+      p1.next(4);
+    });
+  });
+
   describe('ap', function() {
     it('applies a value to a pipe function', function(done) {
       var p = PH.pipe();
@@ -231,7 +277,7 @@ describe('pipe', function() {
       p.next(function(x) { return x + 1; });
     });
 
-    it('is catches errors', function(done) {
+    it('catches errors', function(done) {
       var p = PH.pipe();
 
       PH.ap(5, p).onNext(function() {
