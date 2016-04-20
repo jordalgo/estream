@@ -12,17 +12,19 @@ describe('pipe', function() {
   it('is itself a function that routes messages', function(done) {
     var p = PH.pipe();
     var called = 0;
-    p.onNext(function(x) {
-      assert.equal(x, 5);
-      called++;
-    })
-    .onError(function(e) {
-      assert.equal(e.message, 'error');
-      called++;
-    })
-    .onComplete(function() {
-      assert.equal(called, 2);
-      done();
+    p.subscribe({
+      next: function(x) {
+        assert.equal(x, 5);
+        called++;
+      },
+      error: function(e) {
+        assert.equal(e.message, 'error');
+        called++;
+      },
+      complete: function() {
+        assert.equal(called, 2);
+        done();
+      }
     });
 
     p(null, 5);
@@ -30,16 +32,7 @@ describe('pipe', function() {
     p(null, null, true);
   });
 
-  it('has a next and onNext', function(done) {
-    var p = PH.pipe();
-    p.onNext(function(x) {
-      assert.equal(x, 5);
-      done();
-    });
-    p.next(5);
-  });
-
-  it('has a forEach which is an alias of onNext', function(done) {
+  it('has a next and forEach method', function(done) {
     var p = PH.pipe();
     p.forEach(function(x) {
       assert.equal(x, 5);
@@ -48,11 +41,13 @@ describe('pipe', function() {
     p.next(5);
   });
 
-  it('has a error and onError', function(done) {
+  it('has an error method', function(done) {
     var p = PH.pipe();
-    p.onError(function(x) {
-      assert.equal(x.message, 'error');
-      done();
+    p.subscribe({
+      error: function(x) {
+        assert.equal(x.message, 'error');
+        done();
+      }
     });
     p.error(new Error('error'));
   });
@@ -60,8 +55,10 @@ describe('pipe', function() {
   it('throws if you dont have an onError observer', function() {
     var p = PH.pipe();
 
-    p.onNext(function() {
-      assert.fail();
+    p.subscribe({
+      next: function() {
+        assert.fail();
+      }
     });
 
     try {
@@ -71,64 +68,29 @@ describe('pipe', function() {
     }
   });
 
-  it('has a complete and onComplete', function(done) {
-    var p = PH.pipe();
-    p.onComplete(function() {
-      done();
-    });
-    p.complete();
-  });
-
   it('pipes messages to child pipes', function(done) {
     var p1 = PH.pipe();
     var p2 = PH.pipe(p1);
     var called = 0;
 
-    p2
-    .onNext(function(x) {
-      called++;
-      assert.equal(x, 1);
-    })
-    .onError(function(x) {
-      called++;
-      assert.equal(x.message, 'error');
-    })
-    .onComplete(function() {
-      assert.equal(called, 2);
-      done();
+    p2.subscribe({
+      next: function(x) {
+        called++;
+        assert.equal(x, 1);
+      },
+      error: function(x) {
+        called++;
+        assert.equal(x.message, 'error');
+      },
+      complete: function() {
+        assert.equal(called, 2);
+        done();
+      }
     });
 
     p1.next(1);
     p1.error(new Error('error'));
     p1.complete();
-  });
-
-  it('wont pipe any messages after complete', function(done) {
-    var p = PH.pipe();
-    var completeCalled = 0;
-
-    p
-    .onNext(function() {
-      assert.fail();
-    })
-    .onError(function() {
-      assert.fail();
-    })
-    .onComplete(function() {
-      if (completeCalled === 1) {
-        assert.fail();
-      } else {
-        completeCalled++;
-      }
-    });
-
-    p.complete();
-    p.next(1);
-    p.error(new Error('error'));
-
-    setTimeout(function() {
-      done();
-    }, 1);
   });
 
   it('can have multiple sources', function(done) {
@@ -137,22 +99,23 @@ describe('pipe', function() {
     var p3 = PH.pipe(p1, p2);
     var called = 0;
 
-    p3
-    .onNext(function(x) {
-      if (called === 0) {
-        assert.equal(x, 1);
-      } else {
-        assert.equal(x, 10);
+    p3.subscribe({
+      next: function(x) {
+        if (called === 0) {
+          assert.equal(x, 1);
+        } else {
+          assert.equal(x, 10);
+        }
+        called++;
+      },
+      error: function(x) {
+        called++;
+        assert.equal(x.message, 'error');
+      },
+      complete: function() {
+        assert.equal(called, 3);
+        done();
       }
-      called++;
-    })
-    .onError(function(x) {
-      called++;
-      assert.equal(x.message, 'error');
-    })
-    .onComplete(function() {
-      assert.equal(called, 3);
-      done();
     });
 
     p1.next(1);
@@ -168,21 +131,25 @@ describe('pipe', function() {
 
     p
     .reroute(function(parentPipe, childPipe) {
-      parentPipe.onNext(function() {
-        setTimeout(function() {
-          childPipe.next(5);
-        }, 50);
-        parentPipe.onError(childPipe.error.bind(childPipe));
+      parentPipe.subscribe({
+        next: function() {
+          setTimeout(function() {
+            childPipe.next(5);
+          }, 50);
+        },
+        error: childPipe.error.bind(childPipe)
       });
     })
-    .onNext(function(x) {
-      assert.equal(x, 5);
-      assert.equal(errorCalled, true);
-      done();
-    })
-    .onError(function(e) {
-      assert.equal(e.message, 'error');
-      errorCalled = true;
+    .subscribe({
+      next: function(x) {
+        assert.equal(x, 5);
+        assert.equal(errorCalled, true);
+        done();
+      },
+      error: function(e) {
+        assert.equal(e.message, 'error');
+        errorCalled = true;
+      }
     });
 
     p.next(1);
@@ -200,13 +167,15 @@ describe('pipe', function() {
     // make sure collect works
     var called = 0;
     p.collect(2)
-    .onNext(function(x) {
-      if (called === 0) {
-        assert.equal(x, 1);
-        called++;
-      } else {
-        assert.equal(x, 2);
-        done();
+    .subscribe({
+      next: function(x) {
+        if (called === 0) {
+          assert.equal(x, 1);
+          called++;
+        } else {
+          assert.equal(x, 2);
+          done();
+        }
       }
     });
 
@@ -217,16 +186,95 @@ describe('pipe', function() {
     }, 10);
   });
 
+  describe('complete', function() {
+    it('has a complete and can subscribe to completes', function(done) {
+      var p = PH.pipe();
+      p.subscribe({
+        complete: function() {
+          done();
+        }
+      });
+      p.complete();
+    });
+
+    it('wont pipe any messages after complete', function(done) {
+      var p = PH.pipe();
+      var completeCalled = 0;
+
+      p.subscribe({
+        next: function() {
+          assert.fail();
+        },
+        error: function() {
+          assert.fail();
+        },
+        complete: function() {
+          if (completeCalled === 1) {
+            assert.fail();
+          } else {
+            completeCalled++;
+          }
+        }
+      });
+
+      p.complete();
+      p.next(1);
+      p.error(new Error('error'));
+
+      setTimeout(function() {
+        done();
+      }, 1);
+    });
+
+    it('completes when all parentPipes have completed', function() {
+      var p1 = PH.pipe();
+      var p2 = PH.pipe();
+      var p3 = PH.pipe(p1, p2);
+      var p3Complete = false;
+
+      p3.subscribe({
+        complete: function() {
+          p3Complete = true;
+        }
+      });
+
+      p1.complete();
+      assert.equal(p3Complete, false);
+      p2.complete();
+      assert.equal(p3Complete, true);
+    });
+
+    it('completes if parentPipes have not completed if completed called explicitly', function() {
+      var p0 = PH.pipe();
+      var p1 = PH.pipe();
+      var p2 = PH.pipe();
+      var p3 = PH.pipe(p0, p1, p2);
+      var p3Complete = false;
+
+      p3.subscribe({
+        complete: function() {
+          p3Complete = true;
+        }
+      });
+
+      p1.complete();
+      assert.equal(p3Complete, false);
+      p3.complete();
+      assert.equal(p3Complete, true);
+    });
+  });
+
   describe('map', function() {
     it('maps a function over next values', function(done) {
       var p1 = PH.pipe();
       var add1 = function(val) { return val + 1; };
 
-      p1
-      .map(add1)
-      .onNext(function(x) {
-        assert.equal(x, 5);
-        done();
+      p1.map(add1)
+      .subscribe({
+        next: function(x) {
+          assert.equal(x, 5);
+          done();
+        }
       });
 
       p1.next(4);
@@ -237,9 +285,11 @@ describe('pipe', function() {
       var add1 = function(val) { return val + 1; };
 
       PH.map(add1, p1)
-      .onNext(function(x) {
-        assert.equal(x, 5);
-        done();
+      .subscribe({
+        next: function(x) {
+          assert.equal(x, 5);
+          done();
+        }
       });
 
       p1.next(4);
@@ -249,14 +299,15 @@ describe('pipe', function() {
       var p1 = PH.pipe();
       var throwError = function() { throw new Error('boom'); };
 
-      p1
-      .map(throwError)
-      .onNext(function() {
-        assert.fail();
-      })
-      .onError(function(e) {
-        assert.equal(e.message, 'boom');
-        done();
+      p1.map(throwError)
+      .subscribe({
+        next: function() {
+          assert.fail();
+        },
+        error: function(e) {
+          assert.equal(e.message, 'boom');
+          done();
+        }
       });
 
       p1.next(4);
@@ -267,9 +318,11 @@ describe('pipe', function() {
     it('applies a value to a pipe function', function(done) {
       var p = PH.pipe();
 
-      p.ap(5).onNext(function(x) {
-        assert.equal(x, 6);
-        done();
+      p.ap(5).subscribe({
+        next: function(x) {
+          assert.equal(x, 6);
+          done();
+        }
       });
 
       p.next(function(x) { return x + 1; });
@@ -278,9 +331,11 @@ describe('pipe', function() {
     it('is exported as a function', function(done) {
       var p = PH.pipe();
 
-      PH.ap(5, p).onNext(function(x) {
-        assert.equal(x, 6);
-        done();
+      PH.ap(5, p).subscribe({
+        next: function(x) {
+          assert.equal(x, 6);
+          done();
+        }
       });
 
       p.next(function(x) { return x + 1; });
@@ -289,12 +344,14 @@ describe('pipe', function() {
     it('catches errors', function(done) {
       var p = PH.pipe();
 
-      PH.ap(5, p).onNext(function() {
-        assert.fail();
-      })
-      .onError(function(e) {
-        assert.equal(e.message, 'boom');
-        done();
+      PH.ap(5, p).subscribe({
+        next: function() {
+          assert.fail();
+        },
+        error: function(e) {
+          assert.equal(e.message, 'boom');
+          done();
+        }
       });
 
       p.next(function() { throw new Error('boom'); });
@@ -306,13 +363,15 @@ describe('pipe', function() {
       var p = PH.pipe();
       var called = 0;
 
-      p.scan(sum, 5).onNext(function(x) {
-        if (called === 0) {
-          assert.equal(x, 10);
-          called++;
-        } else {
-          assert.equal(x, 20);
-          done();
+      p.scan(sum, 5).subscribe({
+        next: function(x) {
+          if (called === 0) {
+            assert.equal(x, 10);
+            called++;
+          } else {
+            assert.equal(x, 20);
+            done();
+          }
         }
       });
 
@@ -324,13 +383,15 @@ describe('pipe', function() {
       var p = PH.pipe();
       var called = 0;
 
-      PH.scan(sum, 5, p).onNext(function(x) {
-        if (called === 0) {
-          assert.equal(x, 10);
-          called++;
-        } else {
-          assert.equal(x, 20);
-          done();
+      PH.scan(sum, 5, p).subscribe({
+        next: function(x) {
+          if (called === 0) {
+            assert.equal(x, 10);
+            called++;
+          } else {
+            assert.equal(x, 20);
+            done();
+          }
         }
       });
 
@@ -342,9 +403,14 @@ describe('pipe', function() {
       var p = PH.pipe();
       var sumError = function() { throw new Error('error'); };
 
-      p.scan(sumError, 0).onError(function(e) {
-        assert.equal(e.message, 'error');
-        done();
+      p.scan(sumError, 0).subscribe({
+        next: function() {
+          assert.fail();
+        },
+        error: function(e) {
+          assert.equal(e.message, 'error');
+          done();
+        }
       });
 
       p.next(10);
@@ -356,10 +422,12 @@ describe('pipe', function() {
       var p = PH.pipe();
       var called = 0;
 
-      p.filter(isGt10).onNext(function(x) {
-        assert.equal(x, 11);
-        assert.equal(called, 0);
-        done();
+      p.filter(isGt10).subscribe({
+        next: function(x) {
+          assert.equal(x, 11);
+          assert.equal(called, 0);
+          done();
+        }
       });
 
       p.next(5);
@@ -370,10 +438,12 @@ describe('pipe', function() {
       var p = PH.pipe();
       var called = 0;
 
-      PH.filter(isGt10, p).onNext(function(x) {
-        assert.equal(x, 11);
-        assert.equal(called, 0);
-        done();
+      PH.filter(isGt10, p).subscribe({
+        next: function(x) {
+          assert.equal(x, 11);
+          assert.equal(called, 0);
+          done();
+        }
       });
 
       p.next(5);
@@ -384,9 +454,14 @@ describe('pipe', function() {
       var p = PH.pipe();
       var filterError = function() { throw new Error('error'); };
 
-      p.filter(filterError).onError(function(e) {
-        assert.equal(e.message, 'error');
-        done();
+      p.filter(filterError).subscribe({
+        next: function() {
+          assert.fail();
+        },
+        error: function(e) {
+          assert.equal(e.message, 'error');
+          done();
+        }
       });
 
       p.next(10);
@@ -399,15 +474,17 @@ describe('pipe', function() {
       var called = false;
 
       p.take(1)
-      .onNext(function(x) {
-        assert.equal(x, 5);
-        assert.equal(called, false);
-        called = true;
-      })
-      .onComplete(function() {
-        setTimeout(function() {
-          done();
-        }, 10);
+      .subscribe({
+        next: function(x) {
+          assert.equal(x, 5);
+          assert.equal(called, false);
+          called = true;
+        },
+        complete: function() {
+          setTimeout(function() {
+            done();
+          }, 10);
+        }
       });
 
       p.next(5);
@@ -419,15 +496,17 @@ describe('pipe', function() {
       var called = false;
 
       PH.take(1, p)
-      .onNext(function(x) {
-        assert.equal(x, 5);
-        assert.equal(called, false);
-        called = true;
-      })
-      .onComplete(function() {
-        setTimeout(function() {
-          done();
-        }, 10);
+      .subscribe({
+        next: function(x) {
+          assert.equal(x, 5);
+          assert.equal(called, false);
+          called = true;
+        },
+        complete: function() {
+          setTimeout(function() {
+            done();
+          }, 10);
+        }
       });
 
       p.next(5);
@@ -443,15 +522,17 @@ describe('pipe', function() {
 
       p1
       .completeOnError()
-      .onNext(function() {
-        assert.fail('onNext called');
-      })
-      .onError(function() {
-        errorCalled = true;
-      })
-      .onComplete(function() {
-        assert.equal(errorCalled, true);
-        completeCalled = true;
+      .subscribe({
+        next: function() {
+          assert.fail('subscribe called');
+        },
+        error: function() {
+          errorCalled = true;
+        },
+        complete: function() {
+          assert.equal(errorCalled, true);
+          completeCalled = true;
+        }
       });
 
       p1.error(new Error('error'));

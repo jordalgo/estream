@@ -4,7 +4,7 @@ A javascript utility library for creating pipe-able events (sometimes called str
 
 ## Pipes
 
-Every pipe has next, error, and complete methods. Every pipe also has onNext, onError, onComplete. Next values can be transformed, errors signify that something went wrong, and complete means that no more next values or errors will be passed through this pipe.
+Every pipe has `next`, `error`, and `complete` methods. Every pipe also has a `subscribe` where you can listen for next, error, and complete events. Next values can be transformed, errors signify that something went wrong, and complete means that no more next values or errors will be passed through this pipe.
 
 #### [API](./API.md)
 
@@ -35,14 +35,16 @@ Basic Example:
 ```javascript
 var pipe1 = PH.pipe();
 
-pipe1.onNext(function(x) {
-  console.log('got a next', x);
-})
-.onError(function(err) {
-  console.log('got an error', err.message);
-})
-.onComplete(function() {
-  console.log('got a pipe completion');
+pipe1.subscribe({
+  next: function(x) {
+    console.log('got a next', x);
+  },
+  error: function(err) {
+    console.log('got an error', err.message);
+  },
+  complete: function() {
+    console.log('got a pipe completion');
+  }
 });
 
 pipe1.next(5); // or pipe1(null, 5);
@@ -59,7 +61,7 @@ var sum = function(acc, val) { retrun acc + val; };
 pipe1
 .map(add1) // creates a new pipe
 .scan(sum, 10) // creates a new pipe
-.onNext(function(x) {
+.forEach(function(x) { // alias for subscribing to next
   console.log('got a next', x);
 })
 
@@ -72,17 +74,18 @@ Pipe to Async Pipe (Rerouting):
 var pipe1 = PH.pipe();
 
 pipe1.reroute(function(parentPipe, childPipe) {
-  parentPipe.onNext(function(val) {
-    // simulate a network request
-    setTimeout(function() {
-      childPipe.next(val + 10);
-    }, 1000);
+  parentPipe.subscribe({
+    next: function(val) {
+      // simulate a network request
+      setTimeout(function() {
+        childPipe.next(val + 10);
+      }, 1000);
+    },
+    error: childPipe.error.bind(childPipe),
+    complete: childPipe.complete.bind(childPipe)
   });
-  // reconnect error and complete
-  parentPipe.onError(childPipe.error);
-  parentPipe.onComplete(childPipe.complete);
 })
-.onNext(console.log.bind(console));
+.forEach(console.log.bind(console));
 
 pipe1.next(10);
 

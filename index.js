@@ -74,7 +74,7 @@ function _error(err) {
 
 /**
  * Pass a complete value down the pipe.
- * Once a complete is passed a pipe does not pass any more
+ * Once a complete is passed, a pipe does not pass any more
  * next or error values and it severs all it's child pipes
  * and observing functions.
  *
@@ -88,31 +88,31 @@ function _error(err) {
  * pipe1.complete('The end');
  */
 function complete(value) {
-  this._complete(value);
+  if (this._isComplete) {
+    return;
+  }
+  this.observers.complete.forEach(function(observer) {
+    observer(value);
+  });
+  this.pipes.forEach(function(p) {
+    p._parentComplete(value);
+  });
+  this.pipes = [];
+  Object.keys(this.observers).forEach(function(key) {
+    this.observers[key] = [];
+  }.bind(this));
+  this._isComplete = true;
 }
 
 /**
- * Notify observers and childpipes of a complete.
+ * To only be called by parent pipes.
  *
  * @name _complete
  * @private
  */
-function _complete(value) {
-  if (this._isComplete) {
-    return;
-  }
+function _parentComplete(value) {
   if (this.sourceCount < 2) {
-    this.observers.complete.forEach(function(observer) {
-      observer(value);
-    });
-    this.pipes.forEach(function(p) {
-      p.complete(value);
-    });
-    this.pipes = [];
-    Object.keys(this.observers).forEach(function(key) {
-      this.observers[key] = [];
-    }.bind(this));
-    this._isComplete = true;
+    this.complete(value);
   }
   this.sourceCount--;
 }
@@ -157,56 +157,49 @@ function addSources() {
 }
 
 /**
- * Ads an observer to a pipe's next values. (forEach is an alias)
+ * Ads an observer to a pipe.
+ *
+ * __Signature__: `Object -> Pipe a`
+ *
+ * @name subscribe
+ * @param {Object} observer - the observing object
+ * @return {pipe}
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * pipe1.subscribe({
+ *  next: function(x) { console.log('Got a next value', x); },
+ *  error: function(e) { console.log('Got an error', e); },
+ *  complete: function() { console.log('The pipe completed'); }
+ * });
+ */
+function subscribe(observer) {
+  if (typeof observer.next === 'function') {
+    this.observers.next.push(observer.next);
+  }
+  if (typeof observer.error === 'function') {
+    this.observers.error.push(observer.error);
+  }
+  if (typeof observer.complete === 'function') {
+    this.observers.complete.push(observer.complete);
+  }
+}
+
+/**
+ * Ads an observer to a pipe's next values.
  *
  * __Signature__: `(a -> *) -> Pipe a`
  *
- * @name onNext
+ * @name forEach
  * @param {Function} fn - the observing function
  * @return {pipe}
  *
  * @example
  * var pipe1 = PH.pipe();
- * pipe1.onNext(console.log.bind(console));
+ * pipe1.forEach(console.log.bind(console));
  */
-function onNext(fn) {
+function forEach(fn) {
   this.observers.next.push(fn);
-  return this;
-}
-
-/**
- * Ads an observer to a pipe's errors
- *
- * __Signature__: `(a -> *) -> Pipe a`
- *
- * @name onError
- * @param {Function} fn - the observing function
- * @return {pipe}
- *
- * @example
- * var pipe1 = PH.pipe();
- * pipe1.onError(console.log.bind(console));
- */
-function onError(fn) {
-  this.observers.error.push(fn);
-  return this;
-}
-
-/**
- * Ads an observer to a pipe's complete
- *
- * __Signature__: `(a -> *) -> Pipe a`
- *
- * @name onComplete
- * @param {Function} fn - the observing function
- * @return {pipe}
- *
- * @example
- * var pipe1 = PH.pipe();
- * pipe1.onComplete(console.log.bind(console));
- */
-function onComplete(fn) {
-  this.observers.complete.push(fn);
   return this;
 }
 
@@ -225,9 +218,7 @@ function onComplete(fn) {
  * @example
  * var pipe1 = PH.pipe();
  * pipe1.reroute(function(parentPipe, childPipe) {
- *  parentPipe.onNext(childPipe.next);
- *  parentPipe.onError(childPipe.error);
- *  parentPipe.onComplete(childPipe.complete);
+ *  parentPipe.subscribe(childPipe);
  * });
  */
 function reroute(fn) {
@@ -413,16 +404,14 @@ function completeOnError(parentPipe) {
 var pipe = {
   _next: _next,
   _error: _error,
-  _complete: _complete,
+  _parentComplete: _parentComplete,
   next: next,
   error: error,
   complete: complete,
   addPipe: addPipe,
   addSources: addSources,
-  forEach: onNext,
-  onNext: onNext,
-  onError: onError,
-  onComplete: onComplete,
+  forEach: forEach,
+  subscribe: subscribe,
   reroute: reroute,
   map: function(fn) {
     return map(fn, this);
