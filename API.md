@@ -251,7 +251,7 @@ Returns **pipe**
 
 # onNext
 
-Ads an observer to a pipe's next values
+Ads an observer to a pipe's next values. (forEach is an alias)
 
 **Signature**: `(a -> *) -> Pipe a`
 

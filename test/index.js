@@ -39,6 +39,15 @@ describe('pipe', function() {
     p.next(5);
   });
 
+  it('has a forEach which is an alias of onNext', function(done) {
+    var p = PH.pipe();
+    p.forEach(function(x) {
+      assert.equal(x, 5);
+      done();
+    });
+    p.next(5);
+  });
+
   it('has a error and onError', function(done) {
     var p = PH.pipe();
     p.onError(function(x) {

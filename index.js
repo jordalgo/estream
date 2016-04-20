@@ -157,7 +157,7 @@ function addSources() {
 }
 
 /**
- * Ads an observer to a pipe's next values
+ * Ads an observer to a pipe's next values. (forEach is an alias)
  *
  * __Signature__: `(a -> *) -> Pipe a`
  *
@@ -419,6 +419,7 @@ var pipe = {
   complete: complete,
   addPipe: addPipe,
   addSources: addSources,
+  forEach: onNext,
   onNext: onNext,
   onError: onError,
   onComplete: onComplete,
