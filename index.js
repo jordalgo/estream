@@ -207,7 +207,7 @@ function forEach(fn) {
  * Reroutes a pipe to a passed function.
  * This effectively breaks a pipe chain
  * and puts the responsiblity of reconnecting it
- * on the app developer.
+ * on the passed function.
  *
  * __Signature__: `(Pipe a -> Pipe b -> *) -> Pipe b`
  *
@@ -218,7 +218,12 @@ function forEach(fn) {
  * @example
  * var pipe1 = PH.pipe();
  * pipe1.reroute(function(parentPipe, childPipe) {
- *  parentPipe.subscribe(childPipe);
+ *  parentPipe.subscribe({
+ *    next: function() {
+ *      // do something async
+ *      childPipe.next(asyncValue);
+ *    }
+ *  });
  * });
  */
 function reroute(fn) {
@@ -439,6 +444,7 @@ var pipe = {
  * __Signature__: `Pipe a -> Pipe b`
  *
  * @name createPipe
+ * @private
  * @param {Pipe|Array} - an optional single or array of parent pipes
  * @return {pipe} the pipe
  *

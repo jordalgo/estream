@@ -56,7 +56,7 @@ Chained Transformation:
 ```javascript
 var pipe1 = PH.pipe();
 var add1 = function(x) { return x + 1; };
-var sum = function(acc, val) { retrun acc + val; };
+var sum = function(acc, val) { return acc + val; };
 
 pipe1
 .map(add1) // creates a new pipe

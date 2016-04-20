@@ -80,7 +80,7 @@ Returns **pipe** the pipe with the new value
 # complete
 
 Pass a complete value down the pipe.
-Once a complete is passed a pipe does not pass any more
+Once a complete is passed, a pipe does not pass any more
 next or error values and it severs all it's child pipes
 and observing functions.
 
@@ -117,21 +117,6 @@ var mPipe = PH.completeOnError(pipe1);
 ```
 
 Returns **pipe** the pipe that will complete on error
-
-# createPipe
-
-Create a new pipe and update parent pipes if passed.
-
-**Signature**: `Pipe a -> Pipe b`
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-var pipe2 = PH.pipe(pipe1);
-```
-
-Returns **pipe** the pipe
 
 # error
 
@@ -172,6 +157,25 @@ var mPipe = PH.filter(isEvent, pipe1);
 
 Returns **pipe** the pipe with the filtered next values.
 
+# forEach
+
+Ads an observer to a pipe's next values.
+
+**Signature**: `(a -> *) -> Pipe a`
+
+**Parameters**
+
+-   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the observing function
+
+**Examples**
+
+```javascript
+var pipe1 = PH.pipe();
+pipe1.forEach(console.log.bind(console));
+```
+
+Returns **pipe** 
+
 # map
 
 Returns a Pipe that maps next values.
@@ -211,69 +215,12 @@ var pipe1 = PH.pipe();
 pipe1.next(5);
 ```
 
-# onComplete
-
-Ads an observer to a pipe's complete
-
-**Signature**: `(a -> *) -> Pipe a`
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the observing function
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-pipe1.onComplete(console.log.bind(console));
-```
-
-Returns **pipe** 
-
-# onError
-
-Ads an observer to a pipe's errors
-
-**Signature**: `(a -> *) -> Pipe a`
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the observing function
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-pipe1.onError(console.log.bind(console));
-```
-
-Returns **pipe** 
-
-# onNext
-
-Ads an observer to a pipe's next values. (forEach is an alias)
-
-**Signature**: `(a -> *) -> Pipe a`
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the observing function
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-pipe1.onNext(console.log.bind(console));
-```
-
-Returns **pipe** 
-
 # reroute
 
 Reroutes a pipe to a passed function.
 This effectively breaks a pipe chain
 and puts the responsiblity of reconnecting it
-on the app developer.
+on the passed function.
 
 **Signature**: `(Pipe a -> Pipe b -> *) -> Pipe b`
 
@@ -286,9 +233,12 @@ on the app developer.
 ```javascript
 var pipe1 = PH.pipe();
 pipe1.reroute(function(parentPipe, childPipe) {
- parentPipe.onNext(childPipe.next);
- parentPipe.onError(childPipe.error);
- parentPipe.onComplete(childPipe.complete);
+ parentPipe.subscribe({
+   next: function() {
+     // do something async
+     childPipe.next(asyncValue);
+   }
+ });
 });
 ```
 
@@ -316,6 +266,29 @@ var mPipe = PH.scan(sum, 0, pipe1);
 ```
 
 Returns **pipe** the pipe with the scanned next values
+
+# subscribe
+
+Ads an observer to a pipe.
+
+**Signature**: `Object -> Pipe a`
+
+**Parameters**
+
+-   `observer` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** the observing object
+
+**Examples**
+
+```javascript
+var pipe1 = PH.pipe();
+pipe1.subscribe({
+ next: function(x) { console.log('Got a next value', x); },
+ error: function(e) { console.log('Got an error', e); },
+ complete: function() { console.log('The pipe completed'); }
+});
+```
+
+Returns **pipe** 
 
 # take
 
