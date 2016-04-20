@@ -9,6 +9,27 @@ describe('pipe', function() {
     assert.equal(typeof PH.pipe, 'function');
   });
 
+  it('is itself a function that routes messages', function(done) {
+    var p = PH.pipe();
+    var called = 0;
+    p.onNext(function(x) {
+      assert.equal(x, 5);
+      called++;
+    })
+    .onError(function(e) {
+      assert.equal(e.message, 'error');
+      called++;
+    })
+    .onComplete(function() {
+      assert.equal(called, 2);
+      done();
+    });
+
+    p(null, 5);
+    p(new Error('error'));
+    p(null, null, true);
+  });
+
   it('has a next and onNext', function(done) {
     var p = PH.pipe();
     p.onNext(function(x) {

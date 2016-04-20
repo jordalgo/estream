@@ -45,9 +45,9 @@ pipe1.onNext(function(x) {
   console.log('got a pipe completion');
 });
 
-pipe1.next(5);
-pipe1.error(new Error('boom'));
-pipe1.complete();
+pipe1.next(5); // or pipe1(null, 5);
+pipe1.error(new Error('boom')); // or pipe1(new Error('boom'));
+pipe1.complete(); // or pipe1(null, null, true);
 ```
 
 Chained Transformation:

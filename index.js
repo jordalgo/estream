@@ -461,15 +461,26 @@ function createPipe() {
   if (Array.isArray(sources[0])) {
     sources = sources[0];
   }
-  var p = objectAssign(Object.create(pipe), {
-    sourceCount: 0,
-    pipes: [],
-    observers: {
-      next: [],
-      error: [],
-      complete: []
+
+  var p = function(err, value, completeValue) {
+    if (completeValue) {
+      p.complete(completeValue);
+    } else if (err) {
+      p.error(err);
+    } else {
+      p.next(value);
     }
-  });
+  };
+
+  objectAssign(p, pipe);
+
+  p.sourceCount = 0;
+  p.pipes = [];
+  p.observers = {
+    next: [],
+    error: [],
+    complete: []
+  };
 
   sources.forEach(function(source) {
     source.addPipe(p);
