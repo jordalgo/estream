@@ -26,7 +26,7 @@ Instead of having a ton of methods on the pipe object, you have the ability to a
 
 #### ECMAScript Observable
 
-Pipes are mostly compliant with this [proposal](https://github.com/zenparsing/es-observable) with that difference that pipe observers/subscribers don't control when pipes begin to emit data. A pipe will push data and transform it, even if nothing is listening; much in the same way that click events take place even if you haven't added an event listener.
+Pipes are mostly compliant with this [proposal](https://github.com/zenparsing/es-observable) with that difference that pipe observers/subscribers don't control when pipes begin to emit data. A pipe will push data and transform it, even if nothing is listening; much in the same way that click events take place even if you haven't added an event listener. This allows for easily connecting of pipes together and for multiple subscribers to listen to a single pipe and not have it affect when an async event begins to get handled.
 
 ## Examples:
 

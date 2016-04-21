@@ -1,7 +1,7 @@
 {
   "name": "piping-hot",
   "version": "0.1.0",
-  "description": "A javascript library with a simplified take on hot observables and streams.",
+  "description": "A javascript library with a simplified take on hot observables.",
   "main": "index.js",
   "dependencies": {
     "object-assign": "^4.0.1",
