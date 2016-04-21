@@ -281,14 +281,15 @@ Ads an observer to a pipe.
 
 ```javascript
 var pipe1 = PH.pipe();
-pipe1.subscribe({
+var unsubscribe = pipe1.subscribe({
  next: function(x) { console.log('Got a next value', x); },
  error: function(e) { console.log('Got an error', e); },
  complete: function() { console.log('The pipe completed'); }
 });
+unsubscribe();
 ```
 
-Returns **pipe** 
+Returns **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** unsubcribe
 
 # take
 
@@ -311,3 +312,19 @@ var mPipe = PH.take(3, pipe1);
 ```
 
 Returns **pipe** the pipe that will only accept x number of next values
+
+# unsubscribe
+
+Unsubscribes from next, error, and complete.
+
+**Examples**
+
+```javascript
+var pipe1 = PH.pipe();
+var unsubscribe = pipe1.subscribe({
+ next: function(x) { console.log('Got a next value', x); },
+ error: function(e) { console.log('Got an error', e); },
+ complete: function() { console.log('The pipe completed'); }
+});
+unsubscribe();
+```

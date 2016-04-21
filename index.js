@@ -163,15 +163,16 @@ function addSources() {
  *
  * @name subscribe
  * @param {Object} observer - the observing object
- * @return {pipe}
+ * @return {Function} unsubcribe
  *
  * @example
  * var pipe1 = PH.pipe();
- * pipe1.subscribe({
+ * var unsubscribe = pipe1.subscribe({
  *  next: function(x) { console.log('Got a next value', x); },
  *  error: function(e) { console.log('Got an error', e); },
  *  complete: function() { console.log('The pipe completed'); }
  * });
+ * unsubscribe();
  */
 function subscribe(observer) {
   if (typeof observer.next === 'function') {
@@ -182,6 +183,51 @@ function subscribe(observer) {
   }
   if (typeof observer.complete === 'function') {
     this.observers.complete.push(observer.complete);
+  }
+  return unsubscribe.bind(
+    this,
+    observer.next,
+    observer.error,
+    observer.complete
+  );
+}
+
+/**
+ * Unsubscribes from next, error, and complete.
+ *
+ * @name unsubscribe
+ *
+ * @example
+ * var pipe1 = PH.pipe();
+ * var unsubscribe = pipe1.subscribe({
+ *  next: function(x) { console.log('Got a next value', x); },
+ *  error: function(e) { console.log('Got an error', e); },
+ *  complete: function() { console.log('The pipe completed'); }
+ * });
+ * unsubscribe();
+ */
+function unsubscribe(oNext, oError, oComplete) {
+  if (oNext) {
+    _removeObserver(this, 'next', oNext);
+  }
+  if (oError) {
+    _removeObserver(this, 'error', oError);
+  }
+  if (oComplete) {
+    _removeObserver(this, 'complete', oComplete);
+  }
+}
+
+function _removeObserver(pipe, type, observer) {
+  var foundIndex = -1;
+  for (var i = 0; i < pipe.observers[type].length; ++i) {
+    if (pipe.observers[type][i] === observer) {
+      foundIndex = i;
+      break;
+    }
+  }
+  if (foundIndex !== -1) {
+    pipe.observers[type].splice(foundIndex, 1);
   }
 }
 

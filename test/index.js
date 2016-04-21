@@ -186,6 +186,52 @@ describe('pipe', function() {
     }, 10);
   });
 
+  it('passes an unsubscribe when subscribed', function() {
+    var p = PH.pipe();
+    var nextCalled;
+    var next2Called;
+    var unsubscribe = p.subscribe({
+      next: function(x) {
+        if (!nextCalled) {
+          assert.equal(x, 5);
+          nextCalled = true;
+        } else {
+          assert.fail();
+        }
+      },
+      error: function() {
+        assert.fail();
+      },
+      complete: function() {
+        assert.fail();
+      }
+    });
+
+    p.subscribe({
+      next: function(x) {
+        if (!next2Called) {
+          assert.equal(x, 5);
+          next2Called = 1;
+        } else {
+          assert.equal(x, 6);
+          next2Called = 2;
+        }
+      }
+    });
+
+    p.next(5);
+    assert.equal(nextCalled, true);
+    unsubscribe();
+    p.next(6);
+    assert.equal(next2Called, 2);
+    try {
+      p.error(new Error('boom'));
+    } catch (e) {
+      assert.equal(e.message, 'boom');
+    }
+    p.complete();
+  });
+
   describe('complete', function() {
     it('has a complete and can subscribe to completes', function(done) {
       var p = PH.pipe();
