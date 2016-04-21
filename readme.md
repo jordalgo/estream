@@ -10,24 +10,23 @@ Every pipe has `next`, `error`, and `complete` methods. Every pipe also has a `s
 
 #### Stateless
 
-Pipes are stateless when it comes to the values they are pushing; they have no current value (be it an error, next, or complete), though when pipes "complete" they will sever all connections to their child pipes and their observers. Connecting a pipe to another pipe will only yield future values. Once a message has been pushed through a pipe, it has no record of it; it's gone (unless you use pipe's collect but we'll talk about that later).
+Pipes are stateless when it comes to the values that flow through them; they have no current value (be it an error, next, or complete), though when pipes "complete" they will sever all connections to their child pipes and their observers.
 
 #### Transformations
 
-Pipes have the ability to transform (map, scan) values that pass through them. These transformations only act on "next" values and not on "error" values. Similar to Maybe and Either monads.
+Pipes have the ability to transform (map, scan, filter, etc...) values that pass through them. These transformations only act on "next" values and not on "error" values. Similar to Maybe and Either monads.
 
 #### Chaining
 
-Pipes can be easily chained, or connected, together. All of the transformation methods yield a new pipe that connects to the previous one. The previous pipe has a record of this new pipe and passes along next, error, and complete values to it. A pipe can have multiple pipes connected to it.
+Pipes can be easily chained, or connected, together. All of the transformation methods yield a new pipe that connects to the previous one. The previous pipe has a record of this new pipe and passes along next, error, and complete values to it. A pipe can have multiple pipes connected to it. You can also as easily compose these functions if you prefer.
 
 #### Extendable
 
-Instead of having a ton of methods, you have the ability to add methods onto base pipes to take advantage of chainability if you want.
+Instead of having a ton of methods on the pipe object, you have the ability to add methods onto base pipes to take advantage of chainability.
 
+#### ECMAScript Observable
 
-#### Async Piped to Async
-
-When you want to listen to a pipe's events and trigger another async event, you can use `reroute`. This effectively breaks the pipe chain and puts the responsibility of reconnecting it on you.
+Pipes are mostly compliant with this [proposal](https://github.com/zenparsing/es-observable) with that difference that pipe observers/subscribers don't control when pipes begin to emit data. A pipe will push data and transform it, even if nothing is listening; much in the same way that click events take place even if you haven't added an event listener.
 
 ## Examples:
 
