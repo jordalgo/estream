@@ -6,7 +6,7 @@ A javascript utility library for creating pipe-able events (sometimes called str
 
 Every pipe has `next`, `error`, and `complete` methods. Every pipe also has a `subscribe` where you can listen for next, error, and complete events. Next values can be transformed, errors signify that something went wrong, and complete means that no more next values or errors will be passed through this pipe.
 
-#### [Pipe API](./API.md)
+#### [Pipe API](./api)
 
 #### Stateless
 

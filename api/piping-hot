@@ -54,29 +54,6 @@ var pipe3 = PH.pipe();
 var pipe4 = pipe1.addSources(pipe2, pipe3);
 ```
 
-# ap
-
-Returns a Pipe that applies a value to a next function
-
-**Signature**: `a -> Pipe (a -> b) -> Pipe b`
-
-**Parameters**
-
--   `value` **Any** the value applied to the pipe function
--   `parentPipe` **pipe** the parent pipe
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-var mPipe = pipe1.ap(1);
-// or
-var mPipe = PH.map(add1, pipe1);
-pipe1.next(function(x) { return x + 1; });
-```
-
-Returns **pipe** the pipe with the new value
-
 # complete
 
 Pass a complete value down the pipe.
@@ -97,27 +74,6 @@ var pipe1 = PH.pipe();
 pipe1.complete('The end');
 ```
 
-# completeOnError
-
-Returns a pipe that completes on any error.
-
-**Signature**: `Pipe a -> Pipe a`
-
-**Parameters**
-
--   `parentPipe` **pipe** the parent pipe
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-var mPipe = pipe1.completeOnError();
-// or
-var mPipe = PH.completeOnError(pipe1);
-```
-
-Returns **pipe** the pipe that will complete on error
-
 # error
 
 Pass an error down the pipe.
@@ -134,28 +90,6 @@ Pass an error down the pipe.
 var pipe1 = PH.pipe();
 pipe1.error(new Error('something bad happened'));
 ```
-
-# filter
-
-Returns a Pipe that filters next values.
-
-**Signature**: `(a -> Boolean) -> Pipe a -> Pipe a`
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the filtering function
--   `parentPipe` **pipe** the parent pipe
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-var mPipe = pipe1.filter(isEven);
-// or
-var mPipe = PH.filter(isEvent, pipe1);
-```
-
-Returns **pipe** the pipe with the filtered next values.
 
 # forEach
 
@@ -176,38 +110,6 @@ pipe1.forEach(console.log.bind(console));
 
 Returns **pipe** 
 
-# map
-
-Returns a Pipe that maps next values.
-
-**Signature**: `(a -> b) -> Pipe a -> Pipe b`
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the mapping function
--   `parentPipe` **pipe** the parent pipe
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-var mPipe = pipe1.map(add1);
-// or
-var mPipe = PH.map(add1, pipe1);
-```
-
-Returns **pipe** the pipe with the mapped next values
-
-# map
-
-Transformation Functions
-Exported curried and added as methods to the Pipe object
-
-**Parameters**
-
--   `fn`  
--   `parentPipe`  
-
 # next
 
 Pass a next value down the pipe.
@@ -227,7 +129,7 @@ pipe1.next(5);
 
 # Pipe
 
-The Pipe Object. Use pipe to create.
+The Pipe Object. Use the exposed createPipe/PH.pipe() factory function to create.
 
 # reroute
 
@@ -258,29 +160,6 @@ pipe1.reroute(function(parentPipe, childPipe) {
 
 Returns **pipe** 
 
-# scan
-
-Returns a Pipe that scans next values.
-
-**Signature**: `(b -> a -> c) -> b -> Pipe a -> Pipe c`
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the mapping function
--   `acc` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** intial value
--   `parentPipe` **pipe** the parent pipe
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-var mPipe = pipe1.scan(sum, 0);
-// or
-var mPipe = PH.scan(sum, 0, pipe1);
-```
-
-Returns **pipe** the pipe with the scanned next values
-
 # subscribe
 
 Ads an observer to a pipe.
@@ -304,28 +183,6 @@ unsubscribe();
 ```
 
 Returns **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** unsubcribe
-
-# take
-
-Returns a Pipe that takes x number of next values then completes.
-
-**Signature**: `Int -> Pipe a -> Pipe a`
-
-**Parameters**
-
--   `count` **Integer** the number of next values to take
--   `parentPipe` **pipe** the parent pipe
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-var mPipe = pipe1.take(3);
-// or
-var mPipe = PH.take(3, pipe1);
-```
-
-Returns **pipe** the pipe that will only accept x number of next values
 
 # unsubscribe
 
