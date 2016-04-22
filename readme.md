@@ -46,9 +46,9 @@ var unsubscribe = pipe1.subscribe({
   }
 });
 
-pipe1.next(5); // or pipe1(null, 5);
-pipe1.error(new Error('boom')); // or pipe1(new Error('boom'));
-pipe1.complete(); // or pipe1(null, null, true);
+pipe1.next(5);
+pipe1.error(new Error('boom'));
+pipe1.complete();
 ```
 
 Chained Transformation:

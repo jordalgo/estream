@@ -9,29 +9,6 @@ describe('pipe', function() {
     assert.equal(typeof PH.pipe, 'function');
   });
 
-  it('is itself a function that routes messages', function(done) {
-    var p = PH.pipe();
-    var called = 0;
-    p.subscribe({
-      next: function(x) {
-        assert.equal(x, 5);
-        called++;
-      },
-      error: function(e) {
-        assert.equal(e.message, 'error');
-        called++;
-      },
-      complete: function() {
-        assert.equal(called, 2);
-        done();
-      }
-    });
-
-    p(null, 5);
-    p(new Error('error'));
-    p(null, null, true);
-  });
-
   it('has a next and forEach method', function(done) {
     var p = PH.pipe();
     p.forEach(function(x) {

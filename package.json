@@ -4,7 +4,6 @@
   "description": "A javascript library with a simplified take on hot observables.",
   "main": "index.js",
   "dependencies": {
-    "object-assign": "^4.0.1",
     "ramda": "^0.21.0"
   },
   "devDependencies": {

@@ -198,6 +198,16 @@ var mPipe = PH.map(add1, pipe1);
 
 Returns **pipe** the pipe with the mapped next values
 
+# map
+
+Transformation Functions
+Exported curried and added as methods to the Pipe object
+
+**Parameters**
+
+-   `fn`  
+-   `parentPipe`  
+
 # next
 
 Pass a next value down the pipe.
@@ -214,6 +224,10 @@ Pass a next value down the pipe.
 var pipe1 = PH.pipe();
 pipe1.next(5);
 ```
+
+# Pipe
+
+The Pipe Object. Use pipe to create.
 
 # reroute
 
