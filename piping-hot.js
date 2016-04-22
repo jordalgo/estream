@@ -88,7 +88,7 @@ Pipe.prototype._error = function _error(err) {
  * Pass a complete value down the pipe.
  * Once a complete is passed, a pipe does not pass any more
  * next or error values and it severs all it's child pipes
- * and observing functions.
+ * and subscribers.
  *
  * __Signature__: `a -> undefined`
  *
@@ -245,6 +245,7 @@ function _removeObserver(pipe, type, observer) {
 
 /**
  * Ads an observer to a pipe's next values.
+ * Equivalent to calling subscribe with only a next function.
  *
  * __Signature__: `(a -> *) -> Pipe a`
  *
@@ -329,7 +330,7 @@ function createPipe() {
  * @param {Array} addedMethods - an array of objects
  *
  * @example
- * var pipe1 = PH.addPipeMethods({
+ * PH.addPipeMethods({
  *  name: 'collect',
  *  fn: require('piping-hot/modules/collect')(PH.pipe)
  * });

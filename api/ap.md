@@ -15,8 +15,8 @@ Returns a Pipe that applies a value to a next function
 var pipe1 = PH.pipe();
 var mPipe = pipe1.ap(1);
 // or
-var mPipe = PH.map(add1, pipe1);
+var mPipe = PH.ap(1, pipe1);
 pipe1.next(function(x) { return x + 1; });
 ```
 
-Returns **pipe** the pipe with the new value
+Returns **pipe** 

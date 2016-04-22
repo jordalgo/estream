@@ -13,13 +13,13 @@ module.exports = function(createPipe) {
    * @name ap
    * @param {*} value - the value applied to the pipe function
    * @param {pipe} parentPipe - the parent pipe
-   * @return {pipe} the pipe with the new value
+   * @return {pipe}
    *
    * @example
    * var pipe1 = PH.pipe();
    * var mPipe = pipe1.ap(1);
    * // or
-   * var mPipe = PH.map(add1, pipe1);
+   * var mPipe = PH.ap(1, pipe1);
    * pipe1.next(function(x) { return x + 1; });
    */
   function ap(value, parentPipe) {

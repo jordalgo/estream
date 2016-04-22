@@ -6,7 +6,7 @@ Returns a Pipe that takes x number of next values then completes.
 
 **Parameters**
 
--   `count` **Integer** the number of next values to take
+-   `count` **[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** the number of next values to take
 -   `parentPipe` **pipe** the parent pipe
 
 **Examples**
@@ -18,4 +18,4 @@ var mPipe = pipe1.take(3);
 var mPipe = PH.take(3, pipe1);
 ```
 
-Returns **pipe** the pipe that will only accept x number of next values
+Returns **pipe** 

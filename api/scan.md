@@ -19,4 +19,4 @@ var mPipe = pipe1.scan(sum, 0);
 var mPipe = PH.scan(sum, 0, pipe1);
 ```
 
-Returns **pipe** the pipe with the scanned next values
+Returns **pipe** 

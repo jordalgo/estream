@@ -13,7 +13,7 @@ module.exports = function(createPipe) {
    * @name map
    * @param {Function} fn - the mapping function
    * @param {pipe} parentPipe - the parent pipe
-   * @return {pipe} the pipe with the mapped next values
+   * @return {pipe}
    *
    * @example
    * var pipe1 = PH.pipe();

@@ -15,7 +15,7 @@ Returns a Pipe that filters next values.
 var pipe1 = PH.pipe();
 var mPipe = pipe1.filter(isEven);
 // or
-var mPipe = PH.filter(isEvent, pipe1);
+var mPipe = PH.filter(isEven, pipe1);
 ```
 
-Returns **pipe** the pipe with the filtered next values.
+Returns **pipe** 

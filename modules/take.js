@@ -11,9 +11,9 @@ module.exports = function(createPipe) {
    * __Signature__: `Int -> Pipe a -> Pipe a`
    *
    * @name take
-   * @param {Integer} count - the number of next values to take
+   * @param {number} count - the number of next values to take
    * @param {pipe} parentPipe - the parent pipe
-   * @return {pipe} the pipe that will only accept x number of next values
+   * @return {pipe}
    *
    * @example
    * var pipe1 = PH.pipe();

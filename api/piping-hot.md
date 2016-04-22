@@ -29,7 +29,7 @@ Add methods to the base pipe object.
 **Examples**
 
 ```javascript
-var pipe1 = PH.addPipeMethods({
+PH.addPipeMethods({
  name: 'collect',
  fn: require('piping-hot/modules/collect')(PH.pipe)
 });
@@ -59,7 +59,7 @@ var pipe4 = pipe1.addSources(pipe2, pipe3);
 Pass a complete value down the pipe.
 Once a complete is passed, a pipe does not pass any more
 next or error values and it severs all it's child pipes
-and observing functions.
+and subscribers.
 
 **Signature**: `a -> undefined`
 
@@ -94,6 +94,7 @@ pipe1.error(new Error('something bad happened'));
 # forEach
 
 Ads an observer to a pipe's next values.
+Equivalent to calling subscribe with only a next function.
 
 **Signature**: `(a -> *) -> Pipe a`
 

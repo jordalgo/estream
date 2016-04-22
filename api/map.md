@@ -18,4 +18,4 @@ var mPipe = pipe1.map(add1);
 var mPipe = PH.map(add1, pipe1);
 ```
 
-Returns **pipe** the pipe with the mapped next values
+Returns **pipe** 

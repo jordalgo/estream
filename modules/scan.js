@@ -14,7 +14,7 @@ module.exports = function(createPipe) {
    * @param {Function} fn - the mapping function
    * @param {Object} acc - intial value
    * @param {pipe} parentPipe - the parent pipe
-   * @return {pipe} the pipe with the scanned next values
+   * @return {pipe}
    *
    * @example
    * var pipe1 = PH.pipe();

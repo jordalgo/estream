@@ -13,13 +13,13 @@ module.exports = function(createPipe) {
    * @name filter
    * @param {Function} fn - the filtering function
    * @param {pipe} parentPipe - the parent pipe
-   * @return {pipe} the pipe with the filtered next values.
+   * @return {pipe}
    *
    * @example
    * var pipe1 = PH.pipe();
    * var mPipe = pipe1.filter(isEven);
    * // or
-   * var mPipe = PH.filter(isEvent, pipe1);
+   * var mPipe = PH.filter(isEven, pipe1);
    */
   function filter(fn, parentPipe) {
     var p = createPipe(parentPipe);

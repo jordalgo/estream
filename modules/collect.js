@@ -7,7 +7,7 @@ var createPipe;
  * __Signature__: `Int|Boolean -> Pipe a -> Pipe a
  *
  * @name collect
- * @param {Integer|Boolean} count - the amount of next values to collect.
+ * @param {number|boolean} count - the amount of next values to collect.
  *  If false, collect them all.
  * @param {pipe} parentPipe - the parent pipe
  * @return {pipe} the pipe with the collected next values
