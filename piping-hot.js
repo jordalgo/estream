@@ -16,10 +16,10 @@ function Pipe() {
 /**
  * Notify observers and childpipes of a next value.
  *
- * @name _next
+ * @name _notify
  * @private
  */
-Pipe.prototype._notify = function _next(value) {
+Pipe.prototype._notify = function _notify(value) {
   if (this._isComplete) {
     return;
   }
@@ -74,15 +74,15 @@ Pipe.prototype._error = function _error(err) {
   if (this._isComplete) {
     return;
   }
+  if (!this.pipes.length && !this.observers.error.length) {
+    throw err;
+  }
   this.observers.error.forEach(function(observer) {
     observer(err);
   });
   this.pipes.forEach(function(p) {
     p.next(err);
   });
-  if (!this.pipes.length && !this.observers.error.length) {
-    throw err;
-  }
 };
 
 /**

@@ -1,6 +1,7 @@
 var assert = require('assert');
 var PH = require('../index');
 
+var add1 = function(x) { return x + 1; };
 var sum = function(acc, value) { return acc + value; };
 var isGt10 = function(a) { return a > 10; };
 
@@ -290,7 +291,6 @@ describe('pipe', function() {
   describe('map', function() {
     it('maps a function over next values', function(done) {
       var p1 = PH.pipe();
-      var add1 = function(val) { return val + 1; };
 
       p1.map(add1)
       .subscribe({
@@ -305,7 +305,6 @@ describe('pipe', function() {
 
     it('is exported as a function', function(done) {
       var p1 = PH.pipe();
-      var add1 = function(val) { return val + 1; };
 
       PH.map(add1, p1)
       .subscribe({
