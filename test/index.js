@@ -1,5 +1,6 @@
 var assert = require('assert');
 var PH = require('../index');
+var R = require('ramda');
 
 var add1 = function(x) { return x + 1; };
 var sum = function(acc, value) { return acc + value; };
@@ -208,6 +209,40 @@ describe('pipe', function() {
       assert.equal(e.message, 'boom');
     }
     p.complete();
+  });
+
+  it('is a functor', function() {
+    var p = PH.pipe();
+    var add2 = function(x) { return x + 2; };
+    var composedMap = R.pipe(add1, add2);
+
+    var composedValue;
+    var serialValue;
+
+    var unsubscribe1 = p.map(composedMap).subscribe({
+      next: function(x) {
+        composedValue = x;
+        unsubscribe1();
+      }
+    });
+
+    var unsubscribe2 = p.map(add1).map(add2).subscribe({
+      next: function(x) {
+        serialValue = x;
+        unsubscribe2();
+      }
+    });
+
+    // test identity
+    var unsubscribe3 = p.map(R.identity).subscribe({
+      next: function(x) {
+        assert.equal(x, 1);
+        unsubscribe3();
+      }
+    });
+
+    p.next(1);
+    assert.equal(composedValue, serialValue);
   });
 
   describe('complete', function() {
