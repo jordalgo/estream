@@ -11,7 +11,7 @@ PH.addPipeMethods([{
 }]);
 
 describe('fmap', function() {
-  it('it maps over a functor - Array', function(done) {
+  it('maps over a functor - Array', function(done) {
     var p = PH.pipe();
 
     var unsubscribe = p
@@ -27,7 +27,7 @@ describe('fmap', function() {
     p.next([1, 1, 1]);
   });
 
-  it('it maps over a functor - Maybe', function(done) {
+  it('maps over a functor - Maybe', function(done) {
     var p = PH.pipe();
     var called;
 
@@ -67,7 +67,7 @@ describe('fmap', function() {
     p.next(S.Just(1));
   });
 
-  it('it catches errors', function(done) {
+  it('catches errors', function(done) {
     var p = PH.pipe();
 
     var unsubscribe = p
