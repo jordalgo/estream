@@ -23,8 +23,8 @@ module.exports = function(createPipe) {
    */
   function take(count, parentPipe) {
     var p = createPipe(parentPipe);
-    p.next = function(value) {
-      p._next(value);
+    p._pipeValue = function(value) {
+      p._notify(value);
       count--;
       if (count === 0) {
         p.complete();

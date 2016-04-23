@@ -23,13 +23,13 @@ module.exports = function(createPipe) {
    */
   function filter(fn, parentPipe) {
     var p = createPipe(parentPipe);
-    p.next = function(value) {
+    p._pipeValue = function(value) {
       try {
         if (fn(value)) {
-          this._next(value);
+          this._notify(value);
         }
       } catch (e) {
-        this.error(e);
+        this._error(e);
       }
     };
     return p;

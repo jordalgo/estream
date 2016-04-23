@@ -19,7 +19,7 @@ function Pipe() {
  * @name _next
  * @private
  */
-Pipe.prototype._next = function _next(value) {
+Pipe.prototype._notify = function _next(value) {
   if (this._isComplete) {
     return;
   }
@@ -32,7 +32,20 @@ Pipe.prototype._next = function _next(value) {
 };
 
 /**
+ * Pipes non-error values.
+ * This exists as a to get overwritten by transformations (map, scan, etc...)
+ *
+ * @name pipeValue
+ * @param {*} value - a non error value
+ */
+Pipe.prototype._pipeValue = function(value) {
+  this._notify(value);
+};
+
+/**
  * Pass a next value down the pipe.
+ * Errors (instanceof Error) get routed differently than any other value,
+ * and need to be subscribed to or else this will throw that passed error.
  *
  * __Signature__: `a -> undefined`
  *
@@ -44,23 +57,11 @@ Pipe.prototype._next = function _next(value) {
  * pipe1.next(5);
  */
 Pipe.prototype.next = function next(value) {
-  this._next(value);
-};
-
-/**
- * Pass an error down the pipe.
- *
- * __Signature__: `Error -> undefined`
- *
- * @name error
- * @param {Error} err - the error
- *
- * @example
- * var pipe1 = PH.pipe();
- * pipe1.error(new Error('something bad happened'));
- */
-Pipe.prototype.error = function error(err) {
-  this._error(err);
+  if (value instanceof Error) {
+    this._error(value);
+  } else {
+    this._pipeValue(value);
+  }
 };
 
 /**
@@ -77,7 +78,7 @@ Pipe.prototype._error = function _error(err) {
     observer(err);
   });
   this.pipes.forEach(function(p) {
-    p.error(err);
+    p.next(err);
   });
   if (!this.pipes.length && !this.observers.error.length) {
     throw err;

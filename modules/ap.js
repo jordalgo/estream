@@ -24,11 +24,11 @@ module.exports = function(createPipe) {
    */
   function ap(value, parentPipe) {
     var p = createPipe(parentPipe);
-    p.next = function(fnValue) {
+    p._pipeValue = function(fnValue) {
       var apValue;
       try {
         apValue = fnValue(value);
-        this._next(apValue);
+        this._notify(apValue);
       } catch (e) {
         this._error(e);
       }

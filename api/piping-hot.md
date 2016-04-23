@@ -74,23 +74,6 @@ var pipe1 = PH.pipe();
 pipe1.complete('The end');
 ```
 
-# error
-
-Pass an error down the pipe.
-
-**Signature**: `Error -> undefined`
-
-**Parameters**
-
--   `err` **[Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error)** the error
-
-**Examples**
-
-```javascript
-var pipe1 = PH.pipe();
-pipe1.error(new Error('something bad happened'));
-```
-
 # forEach
 
 Ads an observer to a pipe's next values.
@@ -114,6 +97,8 @@ Returns **pipe**
 # next
 
 Pass a next value down the pipe.
+Errors (instanceof Error) get routed differently than any other value,
+and need to be subscribed to or else this will throw that passed error.
 
 **Signature**: `a -> undefined`
 
@@ -131,6 +116,15 @@ pipe1.next(5);
 # Pipe
 
 The Pipe Object. Use the exposed createPipe/PH.pipe() factory function to create.
+
+# pipeValue
+
+Pipes non-error values.
+This exists as a to get overwritten by transformations (map, scan, etc...)
+
+**Parameters**
+
+-   `value` **Any** a non error value
 
 # reroute
 

@@ -20,9 +20,13 @@ module.exports = function(createPipe) {
    */
   function completeOnError(parentPipe) {
     var p = createPipe(parentPipe);
-    p.error = function(err) {
-      p._error(err);
-      p.complete();
+    p.next = function(value) {
+      if (value instanceof Error) {
+        p._error(value);
+        p.complete();
+      } else {
+        p._pipeValue(value);
+      }
     };
     return p;
   }

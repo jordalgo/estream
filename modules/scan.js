@@ -24,13 +24,13 @@ module.exports = function(createPipe) {
    */
   function scan(fn, acc, parentPipe) {
     var p = createPipe(parentPipe);
-    p.next = function(value) {
+    p._pipeValue = function(value) {
       var accValue;
       try {
         accValue = fn(acc, value);
-        this._next(acc = accValue);
+        this._notify(acc = accValue);
       } catch (e) {
-        this.error(e);
+        this._error(e);
       }
     };
     return p;

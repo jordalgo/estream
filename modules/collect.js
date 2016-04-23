@@ -19,7 +19,7 @@ var createPipe;
 function collect(count, parentPipe) {
   var p = createPipe(parentPipe);
   var history = [];
-  p.next = function(value) {
+  p._pipeValue = function(value) {
     history.push(value);
     if (count) {
       count--;
@@ -30,10 +30,11 @@ function collect(count, parentPipe) {
   };
   p.drain = function() {
     history.forEach(function(value) {
-      p._next(value);
+      p._notify(value);
     });
-    p.next = function(value) {
-      p._next(value);
+    // restore this method.
+    p._pipeValue = function(value) {
+      p._notify(value);
     };
     history = false;
   };

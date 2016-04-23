@@ -4,7 +4,7 @@ A javascript utility library for creating pipe-able events (sometimes called str
 
 ## Pipes
 
-Every pipe has `next`, `error`, and `complete` methods. Every pipe also has a `subscribe` where you can listen for next, error, and complete events. Next values can be transformed, errors signify that something went wrong, and complete means that no more next values or errors will be passed through this pipe.
+Every pipe has a `next` and `complete` method. Every pipe also has a `subscribe` where you can listen for next, errors, and complete events. Next values can be transformed and complete means that no more next values or errors will be passed through this pipe.
 
 #### [Pipe API](./api)
 
@@ -47,7 +47,7 @@ var unsubscribe = pipe1.subscribe({
 });
 
 pipe1.next(5);
-pipe1.error(new Error('boom'));
+pipe1.next(new Error('boom'));
 pipe1.complete();
 ```
 

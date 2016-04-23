@@ -18,7 +18,7 @@ describe('pipe', function() {
     p.next(5);
   });
 
-  it('has an error method', function(done) {
+  it('routes errors', function(done) {
     var p = PH.pipe();
     p.subscribe({
       error: function(x) {
@@ -26,7 +26,7 @@ describe('pipe', function() {
         done();
       }
     });
-    p.error(new Error('error'));
+    p.next(new Error('error'));
   });
 
   it('throws if you dont have an onError observer', function() {
@@ -39,7 +39,7 @@ describe('pipe', function() {
     });
 
     try {
-      p.error(new Error('boom'));
+      p.next(new Error('boom'));
     } catch (e) {
       assert.equal(e.message, 'boom');
     }
@@ -66,7 +66,7 @@ describe('pipe', function() {
     });
 
     p1.next(1);
-    p1.error(new Error('error'));
+    p1.next(new Error('error'));
     p1.complete();
   });
 
@@ -97,7 +97,7 @@ describe('pipe', function() {
 
     p1.next(1);
     p2.next(10);
-    p2.error(new Error('error'));
+    p2.next(new Error('error'));
     p1.complete();
     p2.complete();
   });
@@ -114,7 +114,7 @@ describe('pipe', function() {
             childPipe.next(5);
           }, 50);
         },
-        error: childPipe.error.bind(childPipe)
+        error: childPipe.next.bind(childPipe)
       });
     })
     .subscribe({
@@ -130,7 +130,7 @@ describe('pipe', function() {
     });
 
     p.next(1);
-    p.error(new Error('error'));
+    p.next(new Error('error'));
   });
 
   it('has an addPipeMethods', function(done) {
@@ -202,7 +202,7 @@ describe('pipe', function() {
     p.next(6);
     assert.equal(next2Called, 2);
     try {
-      p.error(new Error('boom'));
+      p.next(new Error('boom'));
     } catch (e) {
       assert.equal(e.message, 'boom');
     }
@@ -242,7 +242,7 @@ describe('pipe', function() {
 
       p.complete();
       p.next(1);
-      p.error(new Error('error'));
+      p.next(new Error('error'));
 
       setTimeout(function() {
         done();
@@ -558,7 +558,7 @@ describe('pipe', function() {
         }
       });
 
-      p1.error(new Error('error'));
+      p1.next(new Error('error'));
       p1.next(1);
 
       setTimeout(function() {
