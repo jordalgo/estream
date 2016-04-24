@@ -20,4 +20,4 @@ pipe1.next([1, 1, 1]);
 // mPipe emits [2, 2, 2]
 ```
 
-Returns **pipe**
+Returns **pipe** 

@@ -241,6 +241,14 @@ describe('pipe', function() {
       }
     });
 
+    // test fmap
+    var unsubscribe4 = R.map(add1, p).subscribe({
+      next: function(x) {
+        assert.equal(x, 2);
+        unsubscribe4();
+      }
+    });
+
     p.next(1);
     assert.equal(composedValue, serialValue);
   });
