@@ -237,13 +237,14 @@ Estream.prototype.push = function(value) {
   }
   if (arguments.length === 0) {
     this._emitEnd();
-    return;
+    return this;
   }
   if (value instanceof Error) {
     this._emitError(value);
   } else {
     this._pushData(value);
   }
+  return this;
 };
 
 /**

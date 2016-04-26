@@ -6,7 +6,7 @@ A javascript utility library for working with stream-like events in the browser.
 
 ## Summary
 
-Estreams work similar to Node read/write streams in that you can listen for data, errors, and end events coming through the streams. You can push new data into the streams by calling `push` on your stream and passing in a piece of data or an error (new Error()). If there are consumers of the stream (or connected streams) it will pass along the data to them, otherwise the data is lost. However, you can buffer this data into memory calling `setBuffer(true)` if you want to save all the events for later consumption.
+Estreams work similar to Node read/write streams in that you can listen for data, errors, and end events coming through the streams. You can push new data into the streams by calling `push` on your stream and passing in a piece of data or an error `new Error('boom')`. If there are consumers of the stream (or connected streams) it will pass along the data to them, otherwise the data is lost. However, you can buffer this data into memory calling `setBuffer(true)` if you want to save all the events for later consumption.
 
 ## Combining Estreams
 
@@ -14,13 +14,11 @@ Combining estreams is very easy. All you have to do is pass the streams you want
 
 ## Estream Endings
 
-To end an estream just call `push` without any arguments, e.g. `s.push();`. When a stream ends all consumer references are removed so you don't have to call `off`. Also, if an estream has multiple parent estreams then the child estream won't emit an end until all of the parent estreams have ended.
+To end an estream just call `push` without any arguments, e.g. `s.push();`. When a stream ends, all consumer references are removed so you don't have to call `off`. Also, if an estream has multiple parent estreams then the child estream won't emit an end until all of the parent estreams have ended.
 
 ## Removing a Consumer
 
 ```javascript
-var ES = require('estreams');
-var s = ES();
 var dataConsumer = function(x) {
   console.log('I got data: ', x);
 };
@@ -66,6 +64,23 @@ s
 
 s.push(5);
 // 16 logs in the console
+```
+
+Buffering Data:
+```javascript
+var s = ES();
+
+s.setBuffer(true);
+s.push(5).push(6).push(10);
+
+setTimeout(function() {
+  s.on('data', function(x) {
+    console.log(x);
+  });
+}, 2000);
+// 5
+// 6
+// 10
 ```
 
 ## Inspiration
