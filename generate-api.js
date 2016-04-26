@@ -8,5 +8,5 @@ modules.forEach(function(module) {
   execSync(cmdBase + moduleFolder + module + ' -o api/' + module.replace('.js', '.md'));
 });
 
-execSync(cmdBase + 'piping-hot.js -o api/piping-hot.md');
+execSync(cmdBase + 'estream.js -o api/estream.md');
 
