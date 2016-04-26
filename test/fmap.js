@@ -17,14 +17,14 @@ describe('fmap', function() {
     var unsubscribe = p
     .fmap(add1)
     .subscribe({
-      next: function(x) {
+      data: function(x) {
         assert.deepEqual(x, [2, 2, 2]);
         unsubscribe();
         done();
       }
     });
 
-    p.next([1, 1, 1]);
+    p.push([1, 1, 1]);
   });
 
   it('maps over a functor - Maybe', function(done) {
@@ -34,7 +34,7 @@ describe('fmap', function() {
     var unsubscribe = p
     .fmap(add1)
     .subscribe({
-      next: function(x) {
+      data: function(x) {
         if (!called) {
           assert.deepEqual(x, S.Just(2));
           called = true;
@@ -46,8 +46,8 @@ describe('fmap', function() {
       }
     });
 
-    p.next(S.Just(1));
-    p.next(S.Nothing());
+    p.push(S.Just(1));
+    p.push(S.Nothing());
   });
 
   it('is autocurried', function(done) {
@@ -58,13 +58,13 @@ describe('fmap', function() {
       fmap(add1),
       fmap(add2)
     )(p).subscribe({
-      next: function(x) {
+      data: function(x) {
         assert.deepEqual(x, S.Just(4));
         done();
       }
     });
 
-    p.next(S.Just(1));
+    p.push(S.Just(1));
   });
 
   it('catches errors', function(done) {
@@ -73,7 +73,7 @@ describe('fmap', function() {
     var unsubscribe = p
     .fmap(add1)
     .subscribe({
-      next: function() {
+      data: function() {
         assert.fail();
       },
       error: function() {
@@ -82,6 +82,6 @@ describe('fmap', function() {
       }
     });
 
-    p.next(1);
+    p.push(1);
   });
 });

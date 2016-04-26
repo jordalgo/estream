@@ -31,7 +31,7 @@ module.exports = function(createPipe) {
         mValue = value.map(fn);
         this._notify(mValue);
       } catch (e) {
-        this.next(e);
+        this._error(e);
       }
     };
     return p;
