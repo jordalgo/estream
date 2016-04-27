@@ -60,27 +60,14 @@ describe('Estream', function() {
     s2.push();
   });
 
-  it('buffers messages with no consumers - buffering on', function(done) {
+  it('buffers messages with no consumers - buffering on', function() {
     var s = ES();
-    var called = 0;
     s.setBuffer(true);
     s.push(3);
     s.push(4);
-    s.push(new Error('boom'));
 
-    s
-    .on('data', function(x) {
-      if (called === 0) {
-        assert.equal(x, 3);
-      } else if (called === 1) {
-        assert.equal(x, 4);
-      }
-      called++;
-    })
-    .on('error', function(x) {
-      assert.equal(called, 2);
-      assert.equal(x.message, 'boom');
-      done();
+    s.on('data', function(x) {
+      assert.deepEqual(x, [3, 4]);
     });
   });
 

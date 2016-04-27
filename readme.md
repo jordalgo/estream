@@ -78,9 +78,7 @@ setTimeout(function() {
     console.log(x);
   });
 }, 2000);
-// 5
-// 6
-// 10
+// [5, 6, 10]
 ```
 
 ## Inspiration

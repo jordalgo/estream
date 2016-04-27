@@ -171,10 +171,6 @@ Estream.prototype._emitData = function(data) {
  * @private
  */
 Estream.prototype._emitError = function(err) {
-  if (!this.consumers.error.length && this._isBuffering) {
-    this.buffer.push(err);
-    return;
-  }
   if ((this.consumers.data.length || this.consumers.end.length) && !this.consumers.error.length) {
     throw err;
   }
@@ -369,23 +365,14 @@ Estream.prototype.off = function(type, consumer) {
 };
 
 /**
- * Drain the values out of the buffer
+ * Drain the buffer
  *
  * @name _drain
  * @private
  */
 Estream.prototype._drain = function() {
-  this.buffer.forEach(function(value) {
-    if (value instanceof Error) {
-      this._emitError(value);
-    } else {
-      this._emitData(value);
-    }
-  }.bind(this));
+  this._emitData(this.buffer);
   this.buffer = [];
-  if (this._ended) {
-    this._emitEnd();
-  }
 };
 
 /**
