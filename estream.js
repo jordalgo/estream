@@ -421,6 +421,32 @@ Estream.prototype.endOnError = function() {
   return s;
 };
 
+/**
+ * Returns an Estream that batches data by count into the buffer.
+ * Sets buffer to false when the count reaches 0 and emits the batched data.
+ *
+ * __Signature__: `Number -> estream a`
+ *
+ * @param {Number} count - the amount to batch
+ * @return {Estream}
+ */
+Estream.prototype.batchByCount = function(count) {
+  var s = createEstream(this);
+  var countState = count;
+  s._pushData = function(value) {
+    this.buffer.push(value);
+    if (countState === 1) {
+      this.setBuffer(false);
+      s._emitData(this.buffer);
+      this.buffer = [];
+      countState = count;
+    } else {
+      countState--;
+    }
+  };
+  return s;
+};
+
 
 // Add Utility Methods for chaining
 Estream.prototype.map = function(fn, safe) {

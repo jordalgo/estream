@@ -52,6 +52,23 @@ var estream3 = ES();
 var estream4 = estream1.addSources(estream2, estream3);
 ```
 
+# Estream
+
+The Estream Object. To create use the exposed factory function.
+
+## batchByCount
+
+Returns an Estream that batches data by count into the buffer.
+Sets buffer to false when the count reaches 0 and emits the batched data.
+
+**Signature**: `Number -> estream a`
+
+**Parameters**
+
+-   `count` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** the amount to batch
+
+Returns **Estream** 
+
 # endOnError
 
 Returns an Estream that ends on any error.
@@ -59,10 +76,6 @@ Returns an Estream that ends on any error.
 **Signature**: `* -> estream a`
 
 Returns **estream** the estream that will end on error
-
-# Estream
-
-The Estream Object. To create use the exposed factory function.
 
 # filter
 
