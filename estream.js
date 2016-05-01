@@ -1,6 +1,22 @@
 var curryN = require('ramda/src/curryN');
 var EVENT_TYPES = ['data', 'error', 'end'];
 
+function wrapError(error, sourceStream) {
+  return {
+    value: error,
+    esType: 'error',
+    source: sourceStream
+  };
+}
+
+function wrapData(data, sourceStream) {
+  return {
+    value: data,
+    esType: 'data',
+    source: sourceStream
+  };
+}
+
 /**
  * Exposed Functions
  * That are also added to the Estream prototype.
@@ -196,7 +212,9 @@ function safeFilter(fn, parentEstream) {
 function Estream() {
   this.sourceCount = 0;
   this._isFlowing = true;
-  this.buffer = [];
+  this._lastIndex = 0;
+  this._keepHistory = true;
+  this.history = [];
   this.consumers = {
     data: [],
     error: [],
@@ -205,8 +223,8 @@ function Estream() {
 }
 
 /**
- * Set _isFlowing property to false. If an estream is not flowing then any value pushed;
- * into an Estream will be stored in memory (in pushed order) until there is a consumer.
+ * Set _isFlowing property to false. If an estream is not flowing then any value pushed
+ * into an Estream will be stored in the history unless history is off.
  *
  * @name pause
  * @return {Estream}
@@ -218,7 +236,7 @@ Estream.prototype.pause = function() {
 
 /**
  * Set _isFlowing property to true. If an estream is not flowing then any value pushed
- * into an Estream will be stored in memory (in pushed order) until there is a consumer.
+ * into an Estream will be stored in the history unless history is off.
  *
  * @name resume
  * @return {Estream}
@@ -228,23 +246,36 @@ Estream.prototype.resume = function() {
   return this;
 };
 
+Estream.prototype._updateHistory = function(message) {
+  if (this._isFlowing) {
+    this._lastIndex++;
+  }
+  this.history.push(message);
+};
+
 /**
- * Emit a non-error, non-end value or buffer it into memory.
+ * Emit a non-error, non-end value or history it into memory.
  *
  * @name _emitData
+ * @param {*} data
+ * @param {Estream} sourceStream - the estream emitting the data
  * @private
  */
-Estream.prototype._emitData = function(data) {
+Estream.prototype._emitData = function(data, sourceStream) {
   if (this._ended) {
     return;
   }
-  if (!this._isFlowing) {
-    this.buffer.push(data);
+  if (!this._isFlowing && !this._keepHistory) {
     return;
   }
-  this.consumers.data.forEach(function(consumer) {
-    consumer(data, this);
-  }.bind(this));
+  if (this._isFlowing) {
+    this.consumers.data.forEach(function(consumer) {
+      consumer(data, sourceStream);
+    });
+  }
+  if (this._keepHistory) {
+    this._updateHistory(wrapData(data, (sourceStream === this) ? null : sourceStream));
+  }
 };
 
 /**
@@ -252,15 +283,25 @@ Estream.prototype._emitData = function(data) {
  * if there are any consumers of error messages.
  *
  * @name _emitError
+ * @param {*} err
+ * @param {Estream} sourceStream - the estream emitting the error
  * @private
  */
-Estream.prototype._emitError = function(err) {
+Estream.prototype._emitError = function(err, sourceStream) {
   if (this._ended) {
     return;
   }
-  this.consumers.error.forEach(function(consumer) {
-    consumer(err, this);
-  }.bind(this));
+  if (!this._isFlowing && !this._keepHistory) {
+    return;
+  }
+  if (this._isFlowing) {
+    this.consumers.error.forEach(function(consumer) {
+      consumer(err, sourceStream);
+    });
+  }
+  if (this._keepHistory) {
+    this._updateHistory(wrapError(err, (sourceStream === this) ? null : sourceStream));
+  }
 };
 
 /**
@@ -276,8 +317,8 @@ Estream.prototype._emitEnd = function() {
     return;
   }
   this.consumers.end.forEach(function(consumer) {
-    consumer(this);
-  }.bind(this));
+    consumer();
+  });
   Object.keys(this.consumers).forEach(function(key) {
     this.consumers[key] = [];
   }.bind(this));
@@ -297,8 +338,8 @@ Estream.prototype._emitEnd = function() {
  * var estream = ES();
  * estream1.push(5);
  */
-Estream.prototype.push = function(data) {
-  this._emitData(data);
+Estream.prototype.push = function(data, sourceStream) {
+  this._emitData(data, sourceStream || this);
 };
 
 /**
@@ -314,8 +355,8 @@ Estream.prototype.push = function(data) {
  * var estream = ES();
  * estream1.error(5);
  */
-Estream.prototype.error = function(error) {
-  this._emitError(error);
+Estream.prototype.error = function(error, sourceStream) {
+  this._emitError(error, sourceStream || this);
 };
 
 /**
@@ -415,8 +456,8 @@ Estream.prototype.addSources = function() {
 
 /**
  * Adds a consumer to a estream.
- * If the stream has data in the buffer,
- * the consuming functions will start receiving the data in the buffer on nextTick.
+ * If the stream has data in the history,
+ * the consuming functions will start receiving the data in the history on nextTick.
  *
  * __Signature__: `(a -> *) -> Estream a`
  *
@@ -435,8 +476,8 @@ Estream.prototype.on = function(type, consumer) {
   if (EVENT_TYPES.indexOf(type) === -1) {
     throw new Error('Event type does not exist: ', type);
   }
-  if (!this.buffer.length && this._ended) {
-    throw new Error('The estream has ended and the buffer is empty.');
+  if (!this.history.length && this._ended) {
+    throw new Error('The estream has ended and the history is empty.');
   }
   if (this.consumers[type].indexOf(consumer) === -1) {
     this.consumers[type].push(consumer);
@@ -446,8 +487,8 @@ Estream.prototype.on = function(type, consumer) {
 
 /**
  * Removes a consumer from a estream.
- * If the stream has data in the buffer,
- * the consuming functions will start receiving the data in the buffer on nextTick.
+ * If the stream has data in the history,
+ * the consuming functions will start receiving the data in the history on nextTick.
  *
  * __Signature__: `(a -> *) -> Estream a`
  *
@@ -481,25 +522,48 @@ Estream.prototype.off = function(type, consumer) {
 };
 
 /**
- * Drain the buffer into the consumers
+ * Drain any history messages that have accumulated while estream is paused
+ * and turns flowing on.
  *
  * @name drain
  */
 Estream.prototype.drain = function() {
   this._isFlowing = true;
-  this._emitData(this.buffer);
-  this.buffer = [];
+  this.history.slice(this._lastIndex, this.history.length).forEach(function(data) {
+    if (data.esType && data.esType === 'error') {
+      this.consumers.error.forEach(function(consumer) {
+        consumer(data.value, data.source || this);
+      });
+      this._emitError(data.value, data.sourceStream);
+    } else {
+      this.consumers.data.forEach(function(consumer) {
+        consumer(data.value, data.source || this);
+      });
+    }
+  }.bind(this));
+  this._lastIndex = this.history.length;
 };
 
 /**
- * Get data out of the buffer
+ * Get data out of the history
  *
- * @name read
- * @param {Number} count - the amount of items to read from the buffer
- * @return {Array} - an array of buffered events
+ * @name getHistory
+ * @param {Number} start - when to start in reading from the history
+ * @param {Number} end - when to end when reading from the history
+ * @return {Array} - an array of historyed events
  */
-Estream.prototype.read = function(count) {
-  return this.buffer.splice(0, count || this.buffer.length);
+Estream.prototype.getHistory = function(start, end) {
+  return this.history.slice(start || 0, end || this.history.length);
+};
+
+/**
+ * Clear the history queue.
+ *
+ * @param clearHistory
+ */
+Estream.prototype.clearHistory = function() {
+  this.history = [];
+  this._lastIndex = 0;
 };
 
 /**
@@ -550,8 +614,7 @@ Estream.prototype.endOnError = function() {
 };
 
 /**
- * Returns an Estream that batches data by count into the buffer.
- * Sets buffer to false when the count reaches 0 and emits the batched data.
+ * Returns an Estream that batches data by count.
  *
  * __Signature__: `Number -> estream a`
  *
@@ -561,17 +624,16 @@ Estream.prototype.endOnError = function() {
 Estream.prototype.batchByCount = function(count) {
   var s = createEstream();
   var countState = count;
+  var batch = [];
   this.on('data', function(data) {
-    s.push(data);
-    if (countState === 1) {
-      s.drain();
+    batch.push(data);
+    countState--;
+    if (countState === 0) {
+      s.push(batch);
+      batch = [];
       countState = count;
-      s.pause();
-    } else {
-      countState--;
     }
   });
-  s.pause();
   this.connect(['error', 'end'], s);
   return s;
 };

@@ -36,25 +36,32 @@ describe('Estream', function() {
     var called = 0;
 
     s3
-    .on('data', function(x) {
+    .on('data', function(x, source) {
       if (called === 0) {
         assert.equal(x, 1);
-      } else {
+        assert.equal(source, s1);
+      } else if (called === 1) {
         assert.equal(x, 10);
+        assert.equal(source, s2);
+      } else {
+        assert.equal(x, 20);
+        assert.equal(source, s3);
       }
       called++;
     })
-    .on('error', function(x) {
+    .on('error', function(x, source) {
       called++;
       assert.equal(x.message, 'error');
+      assert.equal(source, s2);
     })
     .on('end', function() {
-      assert.equal(called, 3);
+      assert.equal(called, 4);
       done();
     });
 
     s1.push(1);
     s2.push(10);
+    s3.push(20);
     s2.error(new Error('error'));
     s1.end();
     s2.end();
@@ -62,14 +69,13 @@ describe('Estream', function() {
 
   it('drains data into consumers and resumes flowing', function(done) {
     var s = ES();
-    var called = false;
+    var called = 0;
     s.pause();
     s.push(3);
-    s.push(4);
 
     s.on('data', function(x) {
       if (!called) {
-        assert.deepEqual(x, [3, 4]);
+        assert.equal(x, 3);
         called = true;
       } else {
         assert.equal(x, 5);
@@ -81,19 +87,55 @@ describe('Estream', function() {
     s.push(5);
   });
 
-  it('returns buffered data with `read`', function() {
+  it('returns history with `getHistory`', function() {
     var s = ES();
-    s.pause();
-    s.push(3);
-    s.push(4);
+    var s2 = ES(s);
+    s2.push(3);
     s.push(5);
+    s2.push(4);
 
-    assert.deepEqual(s.read(2), [3, 4]);
+    var history = s2.getHistory(0, 2);
+    assert.equal(history[0].value, 3);
+    assert.equal(history[0].source, null);
+    assert.equal(history[0].esType, 'data');
+    assert.equal(history[1].value, 5);
+    assert.equal(history[1].source, s);
 
-    s.push(6);
-    s.push(7);
+    assert.equal(s.getHistory(0).length, 1);
+    assert.equal(s2.getHistory(0).length, 3);
 
-    assert.deepEqual(s.read(), [5, 6, 7]);
+    s.error('boom');
+
+    history = s2.getHistory(0);
+    assert.equal(history[0].value, 3);
+    assert.equal(history[0].source, null);
+    assert.equal(history[0].esType, 'data');
+    assert.equal(history[1].value, 5);
+    assert.equal(history[1].source, s);
+    assert.equal(history[2].value, 4);
+    assert.equal(history[2].source, null);
+    assert.equal(history[3].value, 'boom');
+    assert.equal(history[3].esType, 'error');
+    assert.equal(history[3].source, s);
+  });
+
+  it('clears the history with `clearHistory`', function() {
+    var s = ES();
+    var s2 = ES(s);
+    s2.push(3);
+    s.push(5);
+    s2.push(4);
+
+    var history = s2.getHistory(0, 2);
+    assert.equal(history[0].value, 3);
+    assert.equal(history[0].source, null);
+    assert.equal(history[0].esType, 'data');
+    assert.equal(history[1].value, 5);
+    assert.equal(history[1].source, s);
+
+    s2.clearHistory();
+    history = s2.getHistory(0);
+    assert.deepEqual(history, []);
   });
 
   it('does not buffers messages with flowing on (default)', function(done) {
