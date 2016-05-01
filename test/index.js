@@ -70,6 +70,7 @@ describe('Estream', function() {
   it('drains data into consumers and resumes flowing', function(done) {
     var s = ES();
     var called = 0;
+    s.keepHistory(true);
     s.pause();
     s.push(3);
 
@@ -90,6 +91,8 @@ describe('Estream', function() {
   it('returns history with `getHistory`', function() {
     var s = ES();
     var s2 = ES(s);
+    s.keepHistory(true);
+    s2.keepHistory(true);
     s2.push(3);
     s.push(5);
     s2.push(4);
@@ -122,6 +125,8 @@ describe('Estream', function() {
   it('clears the history with `clearHistory`', function() {
     var s = ES();
     var s2 = ES(s);
+    s.keepHistory(true);
+    s2.keepHistory(true);
     s2.push(3);
     s.push(5);
     s2.push(4);

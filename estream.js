@@ -1,6 +1,10 @@
 var curryN = require('ramda/src/curryN');
 var EVENT_TYPES = ['data', 'error', 'end'];
 
+// Default settings for new streams;
+var keepHistory = false;
+var startFlowing = true;
+
 function wrapError(error, sourceStream) {
   return {
     value: error,
@@ -111,9 +115,9 @@ function filter(fn, parentEstream) {
  */
 function Estream() {
   this.sourceCount = 0;
-  this._isFlowing = true;
+  this._isFlowing = startFlowing;
   this._lastIndex = 0;
-  this._keepHistory = true;
+  this._keepHistory = keepHistory;
   this.history = [];
   this.consumers = {
     data: [],
@@ -402,6 +406,22 @@ Estream.prototype.off = function(type, consumer) {
 };
 
 /**
+ * Sets the _keepHistory property.
+ * If this is set to true then an Estream keeps a record of all it's pushed data and errors.
+ * It's a good idea to use this only for debugging only,
+ * as history messages keep references to parent/source streams,
+ * which can amount to a lot of data in memory.
+ *
+ * @name keepHistory
+ * @param {Boolean} keep
+ * @return {Estream}
+ */
+Estream.prototype.keepHistory = function(keep) {
+  this._keepHistory = keep === true;
+  return this;
+};
+
+/**
  * Drain any history messages that have accumulated while estream is paused
  * and turns flowing on.
  *
@@ -518,7 +538,17 @@ function addEstreamMethods(addedMethods) {
   });
 }
 
+function setOptions(options) {
+  if (options.hasOwnProperty('keepHistory')) {
+    keepHistory = options.keepHistory;
+  }
+  if (options.hasOwnProperty('startFlowing')) {
+    startFlowing = options.startFlowing;
+  }
+}
+
 createEstream.addEstreamMethods = addEstreamMethods;
+createEstream.setOptions = setOptions;
 createEstream.map = curryN(2, map);
 createEstream.scan = curryN(3, scan);
 createEstream.filter = curryN(2, filter);
