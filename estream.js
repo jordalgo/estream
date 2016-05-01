@@ -1,7 +1,40 @@
 var curryN = require('ramda/src/curryN');
-var EVENT_TYPE = ['data', 'error', 'end'];
+var EVENT_TYPES = ['data', 'error', 'end'];
 
 // Exposed Functions
+
+/**
+ * Returns an Estream that safely maps non-error values
+ * by wrapping the applied function in a try/catch.
+ * Sending errors down the stream.
+ *
+ * __Signature__: `(a -> b) -> Estream a -> Estream b`
+ *
+ * @name map
+ * @param {Function} fn - the mapping function
+ * @param {Estream} parentEstream
+ * @return {Estream}
+ *
+ * @example
+ * var estream = ES();
+ * var mEstream = estream.safeMap(add1);
+ * // or
+ * var mEstream = ES.safeMap(add1, estream);
+ */
+function safeMap(fn, parentEstream) {
+  var s = createEstream();
+  parentEstream.on('data', function(data) {
+    var mData;
+    try {
+      mData = fn(data);
+      s.push(mData);
+    } catch (e) {
+      s.error(e);
+    }
+  });
+  parentEstream.connect(['error', 'end'], s);
+  return s;
+}
 
 /**
  * Returns an Estream that maps non-error values.
@@ -10,33 +43,21 @@ var EVENT_TYPE = ['data', 'error', 'end'];
  *
  * @name map
  * @param {Function} fn - the mapping function
- * @param {Boolean} safe - if true, wraps the map in a try/catch (default: false)
  * @param {Estream} parentEstream
  * @return {Estream}
  *
  * @example
  * var estream = ES();
- * var mEstream = estream.map(add1, true);
+ * var mEstream = estream.map(add1);
  * // or
  * var mEstream = ES.map(add1, estream);
  */
-function map(fn, safe, parentEstream) {
-  var s = createEstream(parentEstream);
-  if (!safe) {
-    s._pushData = function(value) {
-      this._emitData(fn(value));
-    };
-  } else {
-    s._pushData = function(value) {
-      var mValue;
-      try {
-        mValue = fn(value);
-        this._emitData(mValue);
-      } catch (e) {
-        this._emitError(e);
-      }
-    };
-  }
+function map(fn, parentEstream) {
+  var s = createEstream();
+  parentEstream.on('data', function(data) {
+    s.push(fn(data));
+  });
+  parentEstream.connect(['error', 'end'], s);
   return s;
 }
 
@@ -48,33 +69,21 @@ function map(fn, safe, parentEstream) {
  * @name scan
  * @param {Function} fn - the mapping function
  * @param {Object} acc - intial value
- * @param {Boolean} safe - if true, wraps the scan in a try/catch (default: false)
  * @param {Estream} parentEstream - the parent pipe
  * @return {Estream}
  *
  * @example
  * var estream1 = ES();
- * var sEstream = estream1.scan(sum, 0, true);
+ * var sEstream = estream1.scan(sum, 0);
  * // or
  * var sEstream = ES.scan(sum, 0, estream1);
  */
-function scan(fn, acc, safe, parentEstream) {
-  var s = createEstream(parentEstream);
-  if (safe) {
-    s._pushData = function(value) {
-      var accValue;
-      try {
-        accValue = fn(acc, value);
-        this._emitData(acc = accValue);
-      } catch (e) {
-        this._emitError(e);
-      }
-    };
-  } else {
-    s._pushData = function(value) {
-      this._emitData(acc = fn(acc, value));
-    };
-  }
+function scan(fn, acc, parentEstream) {
+  var s = createEstream();
+  parentEstream.on('data', function(data) {
+    s.push(acc = fn(acc, data));
+  });
+  parentEstream.connect(['error', 'end'], s);
   return s;
 }
 
@@ -85,7 +94,6 @@ function scan(fn, acc, safe, parentEstream) {
  *
  * @name filter
  * @param {Function} fn - the filtering function
- * @param {Boolean} safe - if true, wraps the scan in a try/catch (default: false)
  * @param {estream} parentEstream - the parent estream
  * @return {estream}
  *
@@ -95,25 +103,14 @@ function scan(fn, acc, safe, parentEstream) {
  * // or
  * var mEstream = ES.filter(isEven, estream1);
  */
-function filter(fn, safe, parentEstream) {
-  var s = createEstream(parentEstream);
-  if (safe) {
-    s._pushData = function(value) {
-      try {
-        if (fn(value)) {
-          this._emitData(value);
-        }
-      } catch (e) {
-        this._emitError(e);
-      }
-    };
-  } else {
-    s._pushData = function(value) {
-      if (fn(value)) {
-        this._emitData(value);
-      }
-    };
-  }
+function filter(fn, parentEstream) {
+  var s = createEstream();
+  parentEstream.on('data', function(data) {
+    if (fn(data)) {
+      s.push(data);
+    }
+  });
+  parentEstream.connect(['error', 'end'], s);
   return s;
 }
 
@@ -124,7 +121,7 @@ function filter(fn, safe, parentEstream) {
  */
 function Estream() {
   this.sourceCount = 0;
-  this._isBuffering = false;
+  this._isFlowing = true;
   this.buffer = [];
   this.consumers = {
     data: [],
@@ -134,15 +131,29 @@ function Estream() {
 }
 
 /**
- * Set _isBuffering property. If buffering is turned on then any value pushed
+ * Set _isFlowing property to false. If an estream is not flowing then any value pushed;
  * into an Estream will be stored in memory (in pushed order) until there is a consumer.
  *
- * @name setBuffer
- * @param {Boolean} bool
+ * @name pause
  * @return {Estream}
  */
-Estream.prototype.setBuffer = function(bool) {
-  this._isBuffering = bool === true;
+Estream.prototype.pause = function() {
+  this._isFlowing = false;
+  return this;
+};
+
+/**
+ * Set _isFlowing property to true. If an estream is not flowing then any value pushed
+ * into an Estream will be stored in memory (in pushed order) until there is a consumer.
+ *
+ * @name resume
+ * @return {Estream}
+ */
+Estream.prototype.resume = function() {
+  this._isFlowing = true;
+  if (this.buffer.length) {
+    this._drain();
+  }
   return this;
 };
 
@@ -153,7 +164,10 @@ Estream.prototype.setBuffer = function(bool) {
  * @private
  */
 Estream.prototype._emitData = function(data) {
-  if (!this.consumers.data.length && this._isBuffering) {
+  if (this._ended) {
+    return;
+  }
+  if (!this._isFlowing) {
     this.buffer.push(data);
     return;
   }
@@ -163,16 +177,15 @@ Estream.prototype._emitData = function(data) {
 };
 
 /**
- * Emit an error value or buffer it into memory.
- * If there are any consumers (of either data or end value) but no error,
- * and we're not buffering re-throw the error.
+ * Emit an error value
+ * if there are any consumers of error messages.
  *
  * @name _emitError
  * @private
  */
 Estream.prototype._emitError = function(err) {
-  if ((this.consumers.data.length || this.consumers.end.length) && !this.consumers.error.length) {
-    throw err;
+  if (this._ended) {
+    return;
   }
   this.consumers.error.forEach(function(consumer) {
     consumer(err);
@@ -188,6 +201,9 @@ Estream.prototype._emitError = function(err) {
  * @private
  */
 Estream.prototype._emitEnd = function() {
+  if (this._ended) {
+    return;
+  }
   this.consumers.end.forEach(function(consumer) {
     consumer();
   });
@@ -198,22 +214,7 @@ Estream.prototype._emitEnd = function() {
 };
 
 /**
- * Estreams non-error, non-end values.
- * This exists to get overwritten by transformations (map, scan, etc...)
- *
- * @name _pushData
- * @private
- * @param {*} value - a non error value
- */
-Estream.prototype._pushData = function(data) {
-  this._emitData(data);
-};
-
-/**
- * Pass data down the estream.
- * If the data is an instanceof Error, it will get routed differently.
- * If you call this function with no arguments, you end the estream.
- * This will also throw if you try to push data into an ended estream.
+ * Pushes data down stream.
  *
  * __Signature__: `a -> estream`
  *
@@ -224,23 +225,44 @@ Estream.prototype._pushData = function(data) {
  * @example
  * var estream = ES();
  * estream1.push(5);
- * estream1.push(new Error('boom'));
- * estream1.push(); // ends the estream.
  */
-Estream.prototype.push = function(value) {
-  if (this._ended) {
-    throw new Error('Estream has ended. Can no longer push values.');
-  }
-  if (arguments.length === 0) {
-    this._emitEnd();
-    return this;
-  }
-  if (value instanceof Error) {
-    this._emitError(value);
-  } else {
-    this._pushData(value);
-  }
-  return this;
+Estream.prototype.push = function(data) {
+  this._emitData(data);
+};
+
+/**
+ * Pushes an error down stream
+ *
+ * __Signature__: `a -> Estream`
+ *
+ * @name push
+ * @param {*} value - the error
+ * @param {Estream}
+ *
+ * @example
+ * var estream = ES();
+ * estream1.error(5);
+ */
+Estream.prototype.error = function(error) {
+  this._emitError(error);
+};
+
+/**
+ * Pushes an end down stream.
+ * After a stream ends no more errors or data can be pushed down stream.
+ *
+ * __Signature__: `a -> Estream`
+ *
+ * @name push
+ * @param {*} value - the error
+ * @param {Estream}
+ *
+ * @example
+ * var estream = ES();
+ * estream1.end();
+ */
+Estream.prototype.end = function() {
+  this._emitEnd();
 };
 
 /**
@@ -272,9 +294,35 @@ Estream.prototype._parentEnd = function() {
  */
 Estream.prototype.addEstream = function(s) {
   this.consumers.data.push(s.push.bind(s));
-  this.consumers.error.push(s.push.bind(s));
+  this.consumers.error.push(s.error.bind(s));
   this.consumers.end.push(s._parentEnd.bind(s));
   return this;
+};
+
+/**
+ * Connects a child Estream to a Parent Estream
+ *
+ * __Signature__: `[EVENT_TYPES] -> Estream a -> undefined`
+ *
+ * @name push
+ * @param {Array} eventTypes - 'data', 'error', 'end'
+ * @param {Estream}
+ *
+ * @example
+ * var estream = ES();
+ * estream1.end();
+ */
+Estream.prototype.connect = function(eventTypes, childStream) {
+  eventTypes.forEach(function(event) {
+    if (event === 'end') {
+      this.on(event, childStream._parentEnd.bind(childStream));
+      childStream.sourceCount++;
+    } else if (event === 'data') {
+      this.on(event, childStream.push.bind(childStream));
+    } else {
+      this.on(event, childStream.error.bind(childStream));
+    }
+  }.bind(this));
 };
 
 /**
@@ -313,17 +361,14 @@ Estream.prototype.addSources = function() {
  * });
  */
 Estream.prototype.on = function(type, consumer) {
-  if (EVENT_TYPE.indexOf(type) === -1) {
+  if (EVENT_TYPES.indexOf(type) === -1) {
     throw new Error('Event type does not exist: ', type);
   }
   if (!this.buffer.length && this._ended) {
     throw new Error('The estream has ended and the buffer is empty.');
   }
-  this.consumers[type].push(consumer);
-  if (this.buffer.length) {
-    setTimeout(function() {
-      this._drain();
-    }.bind(this), 0);
+  if (this.consumers[type].indexOf(consumer) === -1) {
+    this.consumers[type].push(consumer);
   }
   return this;
 };
@@ -347,7 +392,7 @@ Estream.prototype.on = function(type, consumer) {
  * });
  */
 Estream.prototype.off = function(type, consumer) {
-  if (EVENT_TYPE.indexOf(type) === -1) {
+  if (EVENT_TYPES.indexOf(type) === -1) {
     throw new Error('Event type does not exist: ', type);
   }
   var foundIndex = -1;
@@ -413,11 +458,12 @@ Estream.prototype.reroute = function reroute(fn) {
  * @return {estream} the estream that will end on error
  */
 Estream.prototype.endOnError = function() {
-  var s = createEstream(this);
-  s._emitError = function() {
-    Estream.prototype._emitError.apply(this, arguments);
-    this._emitEnd();
-  };
+  var s = createEstream();
+  this.on('error', function(error) {
+    s.error(error);
+    s.end();
+  });
+  this.connect(['data', 'end'], s);
   return s;
 };
 
@@ -431,34 +477,35 @@ Estream.prototype.endOnError = function() {
  * @return {Estream}
  */
 Estream.prototype.batchByCount = function(count) {
-  var s = createEstream(this);
+  var s = createEstream();
   var countState = count;
-  s._pushData = function(value) {
-    this.buffer.push(value);
+  this.on('data', function(data) {
+    s.push(data);
     if (countState === 1) {
-      this.setBuffer(false);
-      s._emitData(this.buffer);
-      this.buffer = [];
+      s.resume();
       countState = count;
+      s.pause();
     } else {
       countState--;
     }
-  };
+  });
+  s.pause();
+  this.connect(['error', 'end'], s);
   return s;
 };
 
 
 // Add Utility Methods for chaining
-Estream.prototype.map = function(fn, safe) {
-  return map(fn, safe, this);
+Estream.prototype.map = function(fn) {
+  return map(fn, this);
 };
 
-Estream.prototype.scan = function(fn, acc, safe) {
-  return scan(fn, acc, safe, this);
+Estream.prototype.scan = function(fn, acc) {
+  return scan(fn, acc, this);
 };
 
-Estream.prototype.filter = function(fn, safe) {
-  return filter(fn, safe, this);
+Estream.prototype.filter = function(fn) {
+  return filter(fn, this);
 };
 
 /**
@@ -480,14 +527,10 @@ function createEstream() {
   if (Array.isArray(sources[0])) {
     sources = sources[0];
   }
-
   var estream = new Estream();
-
   sources.forEach(function(source) {
-    source.addEstream(estream);
+    source.connect(EVENT_TYPES, estream);
   });
-
-  estream.sourceCount = sources.length;
   return estream;
 }
 
@@ -516,9 +559,10 @@ function addEstreamMethods(addedMethods) {
 }
 
 createEstream.addEstreamMethods = addEstreamMethods;
-createEstream.map = curryN(3, map);
-createEstream.scan = curryN(4, scan);
-createEstream.filter = curryN(3, filter);
+createEstream.map = curryN(2, map);
+createEstream.safeMap = curryN(2, safeMap);
+createEstream.scan = curryN(3, scan);
+createEstream.filter = curryN(2, filter);
 
 module.exports = createEstream;
 

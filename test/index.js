@@ -26,7 +26,7 @@ describe('Estream', function() {
       assert.equal(x.message, 'error');
       done();
     });
-    s.push(new Error('error'));
+    s.error(new Error('error'));
   });
 
   it('can have multiple source estreams', function(done) {
@@ -55,28 +55,31 @@ describe('Estream', function() {
 
     s1.push(1);
     s2.push(10);
-    s2.push(new Error('error'));
-    s1.push();
-    s2.push();
+    s2.error(new Error('error'));
+    s1.end();
+    s2.end();
   });
 
-  it('buffers messages with no consumers - buffering on', function() {
+  it('buffers messages with flowing off', function(done) {
     var s = ES();
-    s.setBuffer(true);
+    s.pause();
     s.push(3);
     s.push(4);
 
     s.on('data', function(x) {
       assert.deepEqual(x, [3, 4]);
+      done();
     });
+
+    s.resume();
   });
 
-  it('does not buffers messages with no consumers - buffering off (default)', function(done) {
+  it('does not buffers messages with flowing on (default)', function(done) {
     var s = ES();
     var called = 0;
     s.push(3);
     s.push(4);
-    s.push(new Error('boom'));
+    s.error(new Error('boom'));
 
     s
     .on('data', function(x) {
@@ -95,7 +98,7 @@ describe('Estream', function() {
 
     s.push(1);
     s.push(2);
-    s.push(new Error('boom2'));
+    s.error(new Error('boom2'));
   });
 
   it('has a method to remove a consumer', function() {
@@ -130,10 +133,10 @@ describe('Estream', function() {
       s3Complete = true;
     });
 
-    s1.push();
-    s2.push();
+    s1.end();
+    s2.end();
     assert.equal(s3Complete, false);
-    s3.push();
+    s3.end();
     assert.equal(s3Complete, true);
   });
 
@@ -226,7 +229,7 @@ describe('Estream', function() {
 
     s.push(1);
     assert.equal(composedValue, serialValue);
-    s.push();
+    s.end();
   });
 
   describe('map', function() {
@@ -243,7 +246,7 @@ describe('Estream', function() {
 
     it('is exported as a function', function(done) {
       var s1 = ES();
-      ES.map(add1, null, s1)
+      ES.map(add1, s1)
       .on('data', function(x) {
         assert.equal(x, 5);
         done();
@@ -251,7 +254,7 @@ describe('Estream', function() {
       s1.push(4);
     });
 
-    it('catches errors if safe is true', function(done) {
+    xit('catches errors if safe is true', function(done) {
       var s1 = ES();
       var throwError = function() { throw new Error('boom'); };
 
@@ -292,7 +295,7 @@ describe('Estream', function() {
       var s = ES();
       var called = 0;
 
-      ES.scan(sum, 5, null, s)
+      ES.scan(sum, 5, s)
       .on('data', function(x) {
         if (called === 0) {
           assert.equal(x, 10);
@@ -307,7 +310,7 @@ describe('Estream', function() {
       s.push(10);
     });
 
-    it('catches errors if safe is true', function(done) {
+    xit('catches errors if safe is true', function(done) {
       var s = ES();
       var sumError = function() { throw new Error('boom'); };
 
@@ -355,7 +358,7 @@ describe('Estream', function() {
       s.push(11);
     });
 
-    it('catches errors if safe is true', function(done) {
+    xit('catches errors if safe is true', function(done) {
       var s = ES();
       var filterError = function() { throw new Error('boom'); };
 
@@ -391,7 +394,7 @@ describe('Estream', function() {
         endCalled = true;
       });
 
-      s1.push(new Error('error'));
+      s1.error(new Error('error'));
 
       setTimeout(function() {
         assert.equal(endCalled, true);
