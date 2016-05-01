@@ -204,37 +204,6 @@ describe('Estream', function() {
     assert.equal(s3Complete, true);
   });
 
-  xit('has a reroute method', function(done) {
-    var p = ES();
-    var errorCalled;
-
-    p
-    .reroute(function(parentPipe, childPipe) {
-      parentPipe.subscribe({
-        data: function() {
-          setTimeout(function() {
-            childPipe.push(5);
-          }, 50);
-        },
-        error: childPipe.next.bind(childPipe)
-      });
-    })
-    .subscribe({
-      data: function(x) {
-        assert.equal(x, 5);
-        assert.equal(errorCalled, true);
-        done();
-      },
-      error: function(e) {
-        assert.equal(e.message, 'error');
-        errorCalled = true;
-      }
-    });
-
-    p.push(1);
-    p.push(new Error('error'));
-  });
-
   xit('has an addPipeMethods', function(done) {
     ES.addPipeMethods([{
       name: 'collect',
@@ -319,24 +288,6 @@ describe('Estream', function() {
     });
   });
 
-  describe('safeMap', function() {
-    it('catches errors and sends them down the stream', function(done) {
-      var s1 = ES();
-      var throwError = function() { throw new Error('boom'); };
-
-      s1.safeMap(throwError, true)
-      .on('data', function() {
-        assert.fail();
-      })
-      .on('error', function(e) {
-        assert.equal(e.message, 'boom');
-        done();
-      });
-
-      s1.push(4);
-    });
-  });
-
   describe('scan', function() {
     it('reduces pushed data', function(done) {
       var s = ES();
@@ -377,24 +328,6 @@ describe('Estream', function() {
     });
   });
 
-  describe('safeScan', function() {
-    it('catches errors and sends them down stream', function(done) {
-      var s = ES();
-      var sumError = function() { throw new Error('boom'); };
-
-      s.safeScan(sumError, 0)
-      .on('data', function() {
-        assert.fail();
-      })
-      .on('error', function(e) {
-        assert.equal(e.message, 'boom');
-        done();
-      });
-
-      s.push(10);
-    });
-  });
-
   describe('filter', function() {
     it('filters non-error data', function(done) {
       var s = ES();
@@ -427,24 +360,6 @@ describe('Estream', function() {
     });
   });
 
-  describe('safeFilter', function() {
-    it('catches errors and sends them down stream', function(done) {
-      var s = ES();
-      var filterError = function() { throw new Error('boom'); };
-
-      s.safeFilter(filterError)
-      .on('data', function() {
-        assert.fail();
-      })
-      .on('error', function(e) {
-        assert.equal(e.message, 'boom');
-        done();
-      });
-
-      s.push(10);
-    });
-  });
-
   describe('endOnError', function() {
     it('ends on an error', function(done) {
       var s1 = ES();
@@ -470,32 +385,6 @@ describe('Estream', function() {
         assert.equal(endCalled, true);
         done();
       }, 10);
-    });
-  });
-
-  describe('batchByCount', function() {
-    it('batches data into the buffer by count', function(done) {
-      var s = ES();
-      var called;
-
-      s
-      .batchByCount(3)
-      .on('data', function(x) {
-        if (!called) {
-          assert.deepEqual(x, [1, 2, 3]);
-          called = true;
-        } else {
-          assert.deepEqual(x, [4, 5, 6]);
-          done();
-        }
-      });
-
-      s.push(1);
-      s.push(2);
-      s.push(3);
-      s.push(4);
-      s.push(5);
-      s.push(6);
     });
   });
 });

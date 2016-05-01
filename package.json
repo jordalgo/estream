@@ -15,7 +15,7 @@
   },
   "scripts": {
     "lint": "eslint test/ lib/",
-    "test": "mocha -R spec test/index.js",
+    "test": "mocha -R spec test/*.js",
     "docs": "node generate-api.js"
   },
   "repository": {

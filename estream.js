@@ -50,39 +50,6 @@ function map(fn, parentEstream) {
 }
 
 /**
- * Returns an Estream that safely maps data
- * by wrapping the applied function in a try/catch.
- * Sending errors down the stream when there is an error.
- *
- * __Signature__: `(a -> b) -> Estream a -> Estream b`
- *
- * @name safeMap
- * @param {Function} fn - the mapping function
- * @param {Estream} parentEstream
- * @return {Estream}
- *
- * @example
- * var estream = ES();
- * var mEstream = estream.safeMap(add1);
- * // or
- * var mEstream = ES.safeMap(add1, estream);
- */
-function safeMap(fn, parentEstream) {
-  var s = createEstream();
-  parentEstream.on('data', function(data) {
-    var mData;
-    try {
-      mData = fn(data);
-      s.push(mData);
-    } catch (e) {
-      s.error(e);
-    }
-  });
-  parentEstream.connect(['error', 'end'], s);
-  return s;
-}
-
-/**
  * Returns a Estream that scans data.
  * Does not catch errors that occur in the scanning (reducing) function,
  * for that use safeScan.
@@ -111,40 +78,6 @@ function scan(fn, acc, parentEstream) {
 }
 
 /**
- * Returns an Estream that safely scans data
- * by wrapping the applied function in a try/catch.
- * Sending errors down the stream when there is an error.
- *
- * __Signature__: `(b -> a -> c) -> b -> Estream a -> Estream c`
- *
- * @name safeScan
- * @param {Function} fn - the reducing function
- * @param {Object} acc - intial value
- * @param {Estream} parentEstream - the parent pipe
- * @return {Estream}
- *
- * @example
- * var estream1 = ES();
- * var sEstream = estream1.safeScan(sum, 0);
- * // or
- * var sEstream = ES.safeScan(sum, 0, estream1);
- */
-function safeScan(fn, acc, parentEstream) {
-  var s = createEstream();
-  parentEstream.on('data', function(data) {
-    var accValue;
-    try {
-      accValue = fn(data, acc);
-      s.push(acc = accValue);
-    } catch (e) {
-      s.error(e);
-    }
-  });
-  parentEstream.connect(['error', 'end'], s);
-  return s;
-}
-
-/**
  * Returns a estream that filters non-error data.
  *
  * __Signature__: `(a -> Boolean) -> estream a -> estream a`
@@ -165,39 +98,6 @@ function filter(fn, parentEstream) {
   parentEstream.on('data', function(data) {
     if (fn(data)) {
       s.push(data);
-    }
-  });
-  parentEstream.connect(['error', 'end'], s);
-  return s;
-}
-
-/**
- * Returns an Estream that safely filters data
- * by wrapping the applied function in a try/catch.
- * Sending errors down the stream when there is an error.
- *
- * __Signature__: `(a -> Boolean) -> estream a -> estream a`
- *
- * @name safeFilter
- * @param {Function} fn - the filtering function
- * @param {estream} parentEstream - the parent estream
- * @return {estream}
- *
- * @example
- * var estream1 = ES();
- * var mEstream = estream1.filter(isEven);
- * // or
- * var mEstream = ES.filter(isEven, estream1);
- */
-function safeFilter(fn, parentEstream) {
-  var s = createEstream();
-  parentEstream.on('data', function(data) {
-    try {
-      if (fn(data)) {
-        s.push(data);
-      }
-    } catch (e) {
-      s.error(e);
     }
   });
   parentEstream.connect(['error', 'end'], s);
@@ -392,26 +292,6 @@ Estream.prototype._parentEnd = function() {
 };
 
 /**
- * Add a child estream to a parent
- *
- * __Signature__: `Estream b -> estream a`
- *
- * @name addEstream
- * @param {estream} s - the estream to add as a child estream.
- *
- * @example
- * var estream1 = ES();
- * var estream2 = ES();
- * estream1.addEstream(estream2);
- */
-Estream.prototype.addEstream = function(s) {
-  this.consumers.data.push(s.push.bind(s));
-  this.consumers.error.push(s.error.bind(s));
-  this.consumers.end.push(s._parentEnd.bind(s));
-  return this;
-};
-
-/**
  * Connects a child Estream to a Parent Estream
  *
  * __Signature__: `[EVENT_TYPES] -> Estream a -> undefined`
@@ -567,35 +447,6 @@ Estream.prototype.clearHistory = function() {
 };
 
 /**
- * Reroutes an estream to a passed function.
- * This effectively breaks an estream chain
- * and puts the responsiblity of reconnecting it
- * on the passed function.
- *
- * __Signature__: `(Estream a -> estream b -> *) -> Estream b`
- *
- * @name reroute
- * @param {Function} fn - the function that takes the parent and new estream
- * @return {Estream}
- *
- * @example
- * var estream1 = ES();
- * estream1.reroute(function(parentEstream, childEstream) {
- *  parentEstream.on({
- *    data: function() {
- *      // do something async
- *      childEstream.push(asyncValue);
- *    }
- *  });
- * });
- */
-Estream.prototype.reroute = function reroute(fn) {
-  var p = createEstream();
-  fn(this, p);
-  return p;
-};
-
-/**
  * Returns an Estream that ends on any error.
  *
  * __Signature__: `* -> estream a`
@@ -613,39 +464,10 @@ Estream.prototype.endOnError = function() {
   return s;
 };
 
-/**
- * Returns an Estream that batches data by count.
- *
- * __Signature__: `Number -> estream a`
- *
- * @param {Number} count - the amount to batch
- * @return {Estream}
- */
-Estream.prototype.batchByCount = function(count) {
-  var s = createEstream();
-  var countState = count;
-  var batch = [];
-  this.on('data', function(data) {
-    batch.push(data);
-    countState--;
-    if (countState === 0) {
-      s.push(batch);
-      batch = [];
-      countState = count;
-    }
-  });
-  this.connect(['error', 'end'], s);
-  return s;
-};
-
-
 // Add Utility Methods for chaining
 Estream.prototype.map = function(fn) { return map(fn, this); };
-Estream.prototype.safeMap = function(fn) { return safeMap(fn, this); };
 Estream.prototype.scan = function(fn, acc) { return scan(fn, acc, this); };
-Estream.prototype.safeScan = function(fn, acc) { return safeScan(fn, acc, this); };
 Estream.prototype.filter = function(fn) { return filter(fn, this); };
-Estream.prototype.safeFilter = function(fn) { return safeFilter(fn, this); };
 
 /**
  * Create a new estream and update parent estreams if passed.
@@ -698,11 +520,8 @@ function addEstreamMethods(addedMethods) {
 
 createEstream.addEstreamMethods = addEstreamMethods;
 createEstream.map = curryN(2, map);
-createEstream.safeMap = curryN(2, safeMap);
 createEstream.scan = curryN(3, scan);
-createEstream.safeScan = curryN(3, safeScan);
 createEstream.filter = curryN(2, filter);
-createEstream.safeFilter = curryN(2, safeFilter);
 
 module.exports = createEstream;
 
