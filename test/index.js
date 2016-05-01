@@ -60,18 +60,40 @@ describe('Estream', function() {
     s2.end();
   });
 
-  it('buffers messages with flowing off', function(done) {
+  it('drains data into consumers and resumes flowing', function(done) {
     var s = ES();
+    var called = false;
     s.pause();
     s.push(3);
     s.push(4);
 
     s.on('data', function(x) {
-      assert.deepEqual(x, [3, 4]);
-      done();
+      if (!called) {
+        assert.deepEqual(x, [3, 4]);
+        called = true;
+      } else {
+        assert.equal(x, 5);
+        done();
+      }
     });
 
-    s.resume();
+    s.drain();
+    s.push(5);
+  });
+
+  it('returns buffered data with `read`', function() {
+    var s = ES();
+    s.pause();
+    s.push(3);
+    s.push(4);
+    s.push(5);
+
+    assert.deepEqual(s.read(2), [3, 4]);
+
+    s.push(6);
+    s.push(7);
+
+    assert.deepEqual(s.read(), [5, 6, 7]);
   });
 
   it('does not buffers messages with flowing on (default)', function(done) {

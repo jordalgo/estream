@@ -225,9 +225,6 @@ Estream.prototype.pause = function() {
  */
 Estream.prototype.resume = function() {
   this._isFlowing = true;
-  if (this.buffer.length) {
-    this._drain();
-  }
   return this;
 };
 
@@ -246,8 +243,8 @@ Estream.prototype._emitData = function(data) {
     return;
   }
   this.consumers.data.forEach(function(consumer) {
-    consumer(data);
-  });
+    consumer(data, this);
+  }.bind(this));
 };
 
 /**
@@ -262,8 +259,8 @@ Estream.prototype._emitError = function(err) {
     return;
   }
   this.consumers.error.forEach(function(consumer) {
-    consumer(err);
-  });
+    consumer(err, this);
+  }.bind(this));
 };
 
 /**
@@ -279,8 +276,8 @@ Estream.prototype._emitEnd = function() {
     return;
   }
   this.consumers.end.forEach(function(consumer) {
-    consumer();
-  });
+    consumer(this);
+  }.bind(this));
   Object.keys(this.consumers).forEach(function(key) {
     this.consumers[key] = [];
   }.bind(this));
@@ -484,14 +481,25 @@ Estream.prototype.off = function(type, consumer) {
 };
 
 /**
- * Drain the buffer
+ * Drain the buffer into the consumers
  *
- * @name _drain
- * @private
+ * @name drain
  */
-Estream.prototype._drain = function() {
+Estream.prototype.drain = function() {
+  this._isFlowing = true;
   this._emitData(this.buffer);
   this.buffer = [];
+};
+
+/**
+ * Get data out of the buffer
+ *
+ * @name read
+ * @param {Number} count - the amount of items to read from the buffer
+ * @return {Array} - an array of buffered events
+ */
+Estream.prototype.read = function(count) {
+  return this.buffer.splice(0, count || this.buffer.length);
 };
 
 /**
@@ -556,7 +564,7 @@ Estream.prototype.batchByCount = function(count) {
   this.on('data', function(data) {
     s.push(data);
     if (countState === 1) {
-      s.resume();
+      s.drain();
       countState = count;
       s.pause();
     } else {
