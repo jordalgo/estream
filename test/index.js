@@ -253,12 +253,14 @@ describe('Estream', function() {
       });
       s1.push(4);
     });
+  });
 
-    xit('catches errors if safe is true', function(done) {
+  describe('safeMap', function() {
+    it('catches errors and sends them down the stream', function(done) {
       var s1 = ES();
       var throwError = function() { throw new Error('boom'); };
 
-      s1.map(throwError, true)
+      s1.safeMap(throwError, true)
       .on('data', function() {
         assert.fail();
       })
@@ -309,12 +311,14 @@ describe('Estream', function() {
       s.push(5);
       s.push(10);
     });
+  });
 
-    xit('catches errors if safe is true', function(done) {
+  describe('safeScan', function() {
+    it('catches errors and sends them down stream', function(done) {
       var s = ES();
       var sumError = function() { throw new Error('boom'); };
 
-      s.scan(sumError, 0, true)
+      s.safeScan(sumError, 0)
       .on('data', function() {
         assert.fail();
       })
@@ -357,12 +361,14 @@ describe('Estream', function() {
       s.push(5);
       s.push(11);
     });
+  });
 
-    xit('catches errors if safe is true', function(done) {
+  describe('safeFilter', function() {
+    it('catches errors and sends them down stream', function(done) {
       var s = ES();
       var filterError = function() { throw new Error('boom'); };
 
-      s.filter(filterError, true)
+      s.safeFilter(filterError)
       .on('data', function() {
         assert.fail();
       })

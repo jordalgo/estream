@@ -1,16 +1,46 @@
 var curryN = require('ramda/src/curryN');
 var EVENT_TYPES = ['data', 'error', 'end'];
 
-// Exposed Functions
+/**
+ * Exposed Functions
+ * That are also added to the Estream prototype.
+ */
 
 /**
- * Returns an Estream that safely maps non-error values
- * by wrapping the applied function in a try/catch.
- * Sending errors down the stream.
+ * Returns an Estream that maps data.
+ * Does not catch errors that occur in the mapping function,
+ * for that use safeMap.
  *
  * __Signature__: `(a -> b) -> Estream a -> Estream b`
  *
  * @name map
+ * @param {Function} fn - the mapping function
+ * @param {Estream} parentEstream
+ * @return {Estream}
+ *
+ * @example
+ * var estream = ES();
+ * var mEstream = estream.map(add1);
+ * // or
+ * var mEstream = ES.map(add1, estream);
+ */
+function map(fn, parentEstream) {
+  var s = createEstream();
+  parentEstream.on('data', function(data) {
+    s.push(fn(data));
+  });
+  parentEstream.connect(['error', 'end'], s);
+  return s;
+}
+
+/**
+ * Returns an Estream that safely maps data
+ * by wrapping the applied function in a try/catch.
+ * Sending errors down the stream when there is an error.
+ *
+ * __Signature__: `(a -> b) -> Estream a -> Estream b`
+ *
+ * @name safeMap
  * @param {Function} fn - the mapping function
  * @param {Estream} parentEstream
  * @return {Estream}
@@ -37,37 +67,14 @@ function safeMap(fn, parentEstream) {
 }
 
 /**
- * Returns an Estream that maps non-error values.
- *
- * __Signature__: `(a -> b) -> Estream a -> Estream b`
- *
- * @name map
- * @param {Function} fn - the mapping function
- * @param {Estream} parentEstream
- * @return {Estream}
- *
- * @example
- * var estream = ES();
- * var mEstream = estream.map(add1);
- * // or
- * var mEstream = ES.map(add1, estream);
- */
-function map(fn, parentEstream) {
-  var s = createEstream();
-  parentEstream.on('data', function(data) {
-    s.push(fn(data));
-  });
-  parentEstream.connect(['error', 'end'], s);
-  return s;
-}
-
-/**
- * Returns a Estream that scans non-error data.
+ * Returns a Estream that scans data.
+ * Does not catch errors that occur in the scanning (reducing) function,
+ * for that use safeScan.
  *
  * __Signature__: `(b -> a -> c) -> b -> Estream a -> Estream c`
  *
  * @name scan
- * @param {Function} fn - the mapping function
+ * @param {Function} fn - the reducing function
  * @param {Object} acc - intial value
  * @param {Estream} parentEstream - the parent pipe
  * @return {Estream}
@@ -82,6 +89,40 @@ function scan(fn, acc, parentEstream) {
   var s = createEstream();
   parentEstream.on('data', function(data) {
     s.push(acc = fn(acc, data));
+  });
+  parentEstream.connect(['error', 'end'], s);
+  return s;
+}
+
+/**
+ * Returns an Estream that safely scans data
+ * by wrapping the applied function in a try/catch.
+ * Sending errors down the stream when there is an error.
+ *
+ * __Signature__: `(b -> a -> c) -> b -> Estream a -> Estream c`
+ *
+ * @name safeScan
+ * @param {Function} fn - the reducing function
+ * @param {Object} acc - intial value
+ * @param {Estream} parentEstream - the parent pipe
+ * @return {Estream}
+ *
+ * @example
+ * var estream1 = ES();
+ * var sEstream = estream1.safeScan(sum, 0);
+ * // or
+ * var sEstream = ES.safeScan(sum, 0, estream1);
+ */
+function safeScan(fn, acc, parentEstream) {
+  var s = createEstream();
+  parentEstream.on('data', function(data) {
+    var accValue;
+    try {
+      accValue = fn(data, acc);
+      s.push(acc = accValue);
+    } catch (e) {
+      s.error(e);
+    }
   });
   parentEstream.connect(['error', 'end'], s);
   return s;
@@ -108,6 +149,39 @@ function filter(fn, parentEstream) {
   parentEstream.on('data', function(data) {
     if (fn(data)) {
       s.push(data);
+    }
+  });
+  parentEstream.connect(['error', 'end'], s);
+  return s;
+}
+
+/**
+ * Returns an Estream that safely filters data
+ * by wrapping the applied function in a try/catch.
+ * Sending errors down the stream when there is an error.
+ *
+ * __Signature__: `(a -> Boolean) -> estream a -> estream a`
+ *
+ * @name safeFilter
+ * @param {Function} fn - the filtering function
+ * @param {estream} parentEstream - the parent estream
+ * @return {estream}
+ *
+ * @example
+ * var estream1 = ES();
+ * var mEstream = estream1.filter(isEven);
+ * // or
+ * var mEstream = ES.filter(isEven, estream1);
+ */
+function safeFilter(fn, parentEstream) {
+  var s = createEstream();
+  parentEstream.on('data', function(data) {
+    try {
+      if (fn(data)) {
+        s.push(data);
+      }
+    } catch (e) {
+      s.error(e);
     }
   });
   parentEstream.connect(['error', 'end'], s);
@@ -496,17 +570,12 @@ Estream.prototype.batchByCount = function(count) {
 
 
 // Add Utility Methods for chaining
-Estream.prototype.map = function(fn) {
-  return map(fn, this);
-};
-
-Estream.prototype.scan = function(fn, acc) {
-  return scan(fn, acc, this);
-};
-
-Estream.prototype.filter = function(fn) {
-  return filter(fn, this);
-};
+Estream.prototype.map = function(fn) { return map(fn, this); };
+Estream.prototype.safeMap = function(fn) { return safeMap(fn, this); };
+Estream.prototype.scan = function(fn, acc) { return scan(fn, acc, this); };
+Estream.prototype.safeScan = function(fn, acc) { return safeScan(fn, acc, this); };
+Estream.prototype.filter = function(fn) { return filter(fn, this); };
+Estream.prototype.safeFilter = function(fn) { return safeFilter(fn, this); };
 
 /**
  * Create a new estream and update parent estreams if passed.
@@ -514,7 +583,6 @@ Estream.prototype.filter = function(fn) {
  * __Signature__: `Estream a -> estream b`
  *
  * @name createEstream
- * @private
  * @param {Estream|Array} - an optional single or array of parent estreams
  * @return {estream} the pipe
  *
@@ -562,7 +630,9 @@ createEstream.addEstreamMethods = addEstreamMethods;
 createEstream.map = curryN(2, map);
 createEstream.safeMap = curryN(2, safeMap);
 createEstream.scan = curryN(3, scan);
+createEstream.safeScan = curryN(3, safeScan);
 createEstream.filter = curryN(2, filter);
+createEstream.safeFilter = curryN(2, safeFilter);
 
 module.exports = createEstream;
 
