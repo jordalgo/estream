@@ -1,3 +1,22 @@
+# Estream
+
+The Estream Object. To create use the exposed factory function.
+
+**Examples**
+
+```javascript
+var ES = require('estream');
+var estream1 = ES();
+```
+
+## clearHistory
+
+Clear the history queue.
+
+**Parameters**
+
+-   `clearHistory`  
+
 # addEstreamMethods
 
 Add methods to the base estream object.
@@ -34,18 +53,6 @@ var estream3 = ES();
 var estream4 = estream1.addSources(estream2, estream3);
 ```
 
-# Estream
-
-The Estream Object. To create use the exposed factory function.
-
-## clearHistory
-
-Clear the history queue.
-
-**Parameters**
-
--   `clearHistory`  
-
 # createEstream
 
 Create a new estream and update parent estreams if passed.
@@ -77,21 +84,20 @@ Returns **estream** the estream that will end on error
 # filter
 
 Returns a estream that filters non-error data.
+Does not catch errors that occur in the filtering function,
+for that use safeFilter in modules.
 
 **Signature**: `(a -> Boolean) -> estream a -> estream a`
 
 **Parameters**
 
 -   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the filtering function
--   `parentEstream` **estream** the parent estream
 
 **Examples**
 
 ```javascript
 var estream1 = ES();
 var mEstream = estream1.filter(isEven);
-// or
-var mEstream = ES.filter(isEven, estream1);
 ```
 
 Returns **estream** 
@@ -122,35 +128,22 @@ Returns **Estream**
 
 Returns an Estream that maps data.
 Does not catch errors that occur in the mapping function,
-for that use safeMap.
+for that use safeMap in modules.
 
 **Signature**: `(a -> b) -> Estream a -> Estream b`
 
 **Parameters**
 
 -   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the mapping function
--   `parentEstream` **Estream** 
 
 **Examples**
 
 ```javascript
 var estream = ES();
 var mEstream = estream.map(add1);
-// or
-var mEstream = ES.map(add1, estream);
 ```
 
 Returns **Estream** 
-
-# map
-
-Exposed Functions
-That are also added to the Estream prototype.
-
-**Parameters**
-
--   `fn`  
--   `parentEstream`  
 
 # off
 
@@ -203,9 +196,28 @@ Returns **Estream**
 # pause
 
 Set \_isFlowing property to false. If an estream is not flowing then any value pushed
-into an Estream will be stored in the history unless history is off.
+into it will be stored in the history (if \_keepHistory is also true).
 
 Returns **Estream** 
+
+# push
+
+Pushes an end down stream.
+After a stream ends no more errors or data can be pushed down stream.
+
+**Signature**: `a -> Estream`
+
+**Parameters**
+
+-   `value` **Any** the error
+-   `Estream`  
+
+**Examples**
+
+```javascript
+var estream = ES();
+estream1.end();
+```
 
 # push
 
@@ -223,24 +235,6 @@ Connects a child Estream to a Parent Estream
 ```javascript
 var estream = ES();
 estream1.end();
-```
-
-# push
-
-Pushes an error down stream
-
-**Signature**: `a -> Estream`
-
-**Parameters**
-
--   `value` **Any** the error
--   `Estream`  
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.error(5);
 ```
 
 # push
@@ -263,8 +257,7 @@ estream1.push(5);
 
 # push
 
-Pushes an end down stream.
-After a stream ends no more errors or data can be pushed down stream.
+Pushes an error down stream
 
 **Signature**: `a -> Estream`
 
@@ -277,13 +270,13 @@ After a stream ends no more errors or data can be pushed down stream.
 
 ```javascript
 var estream = ES();
-estream1.end();
+estream1.error(5);
 ```
 
 # resume
 
 Set \_isFlowing property to true. If an estream is not flowing then any value pushed
-into an Estream will be stored in the history unless history is off.
+into it will be stored in the history (if \_keepHistory is also true).
 
 Returns **Estream** 
 
@@ -291,7 +284,7 @@ Returns **Estream**
 
 Returns a Estream that scans data.
 Does not catch errors that occur in the scanning (reducing) function,
-for that use safeScan.
+for that use safeScan in modules.
 
 **Signature**: `(b -> a -> c) -> b -> Estream a -> Estream c`
 
@@ -299,15 +292,12 @@ for that use safeScan.
 
 -   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the reducing function
 -   `acc` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** intial value
--   `parentEstream` **Estream** the parent pipe
 
 **Examples**
 
 ```javascript
 var estream1 = ES();
 var sEstream = estream1.scan(sum, 0);
-// or
-var sEstream = ES.scan(sum, 0, estream1);
 ```
 
 Returns **Estream** 

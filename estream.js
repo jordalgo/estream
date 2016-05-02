@@ -5,6 +5,14 @@ var EVENT_TYPES = ['data', 'error', 'end'];
 var keepHistory = true;
 var startFlowing = true;
 
+/**
+ * Add metadata to errors for history replay.
+ *
+ * @private
+ * @param {*} error
+ * @param {String} estreamId
+ * @return {Object}
+ */
 function wrapError(error, estreamId) {
   return {
     value: error,
@@ -13,6 +21,14 @@ function wrapError(error, estreamId) {
   };
 }
 
+/**
+ * Add metadata to data for history replay.
+ *
+ * @private
+ * @param {*} data
+ * @param {String} estreamId
+ * @return {Object}
+ */
 function wrapData(data, estreamId) {
   return {
     value: data,
@@ -22,94 +38,10 @@ function wrapData(data, estreamId) {
 }
 
 /**
- * Exposed Functions
- * That are also added to the Estream prototype.
- */
-
-/**
- * Returns an Estream that maps data.
- * Does not catch errors that occur in the mapping function,
- * for that use safeMap.
- *
- * __Signature__: `(a -> b) -> Estream a -> Estream b`
- *
- * @name map
- * @param {Function} fn - the mapping function
- * @param {Estream} parentEstream
- * @return {Estream}
- *
- * @example
- * var estream = ES();
- * var mEstream = estream.map(add1);
- * // or
- * var mEstream = ES.map(add1, estream);
- */
-function map(fn, parentEstream) {
-  var s = createEstream();
-  parentEstream.on('data', function(data) {
-    s.push(fn(data));
-  });
-  parentEstream.connect(['error', 'end'], s);
-  return s;
-}
-
-/**
- * Returns a Estream that scans data.
- * Does not catch errors that occur in the scanning (reducing) function,
- * for that use safeScan.
- *
- * __Signature__: `(b -> a -> c) -> b -> Estream a -> Estream c`
- *
- * @name scan
- * @param {Function} fn - the reducing function
- * @param {Object} acc - intial value
- * @param {Estream} parentEstream - the parent pipe
- * @return {Estream}
- *
- * @example
- * var estream1 = ES();
- * var sEstream = estream1.scan(sum, 0);
- * // or
- * var sEstream = ES.scan(sum, 0, estream1);
- */
-function scan(fn, acc, parentEstream) {
-  var s = createEstream();
-  parentEstream.on('data', function(data) {
-    s.push(acc = fn(acc, data));
-  });
-  parentEstream.connect(['error', 'end'], s);
-  return s;
-}
-
-/**
- * Returns a estream that filters non-error data.
- *
- * __Signature__: `(a -> Boolean) -> estream a -> estream a`
- *
- * @name filter
- * @param {Function} fn - the filtering function
- * @param {estream} parentEstream - the parent estream
- * @return {estream}
- *
- * @example
- * var estream1 = ES();
- * var mEstream = estream1.filter(isEven);
- * // or
- * var mEstream = ES.filter(isEven, estream1);
- */
-function filter(fn, parentEstream) {
-  var s = createEstream();
-  parentEstream.on('data', function(data) {
-    if (fn(data)) {
-      s.push(data);
-    }
-  });
-  parentEstream.connect(['error', 'end'], s);
-  return s;
-}
-
-/**
  * The Estream Object. To create use the exposed factory function.
+ * @example
+ * var ES = require('estream');
+ * var estream1 = ES();
  *
  * @constructor
  */
@@ -129,7 +61,7 @@ function Estream() {
 
 /**
  * Set _isFlowing property to false. If an estream is not flowing then any value pushed
- * into an Estream will be stored in the history unless history is off.
+ * into it will be stored in the history (if _keepHistory is also true).
  *
  * @name pause
  * @return {Estream}
@@ -141,7 +73,7 @@ Estream.prototype.pause = function() {
 
 /**
  * Set _isFlowing property to true. If an estream is not flowing then any value pushed
- * into an Estream will be stored in the history unless history is off.
+ * into it will be stored in the history (if _keepHistory is also true).
  *
  * @name resume
  * @return {Estream}
@@ -151,6 +83,12 @@ Estream.prototype.resume = function() {
   return this;
 };
 
+/**
+ * Update the history array with either a wrapped data or a wrapped error.
+ *
+ * @private
+ * @param {Object} message - wrapped data or wrapped error
+ */
 Estream.prototype._updateHistory = function(message) {
   if (this._isFlowing) {
     this._lastIndex++;
@@ -482,10 +420,80 @@ Estream.prototype.endOnError = function() {
   return s;
 };
 
-// Add Utility Methods for chaining
-Estream.prototype.map = function(fn) { return map(fn, this); };
-Estream.prototype.scan = function(fn, acc) { return scan(fn, acc, this); };
-Estream.prototype.filter = function(fn) { return filter(fn, this); };
+/**
+ * Returns an Estream that maps data.
+ * Does not catch errors that occur in the mapping function,
+ * for that use safeMap in modules.
+ *
+ * __Signature__: `(a -> b) -> Estream a -> Estream b`
+ *
+ * @name map
+ * @param {Function} fn - the mapping function
+ * @return {Estream}
+ *
+ * @example
+ * var estream = ES();
+ * var mEstream = estream.map(add1);
+ */
+Estream.prototype.map = function(fn) {
+  var s = createEstream();
+  this.on('data', function(data) {
+    s.push(fn(data));
+  });
+  this.connect(['error', 'end'], s);
+  return s;
+};
+
+/**
+ * Returns a Estream that scans data.
+ * Does not catch errors that occur in the scanning (reducing) function,
+ * for that use safeScan in modules.
+ *
+ * __Signature__: `(b -> a -> c) -> b -> Estream a -> Estream c`
+ *
+ * @name scan
+ * @param {Function} fn - the reducing function
+ * @param {Object} acc - intial value
+ * @return {Estream}
+ *
+ * @example
+ * var estream1 = ES();
+ * var sEstream = estream1.scan(sum, 0);
+ */
+Estream.prototype.scan = function(fn, acc) {
+  var s = createEstream();
+  this.on('data', function(data) {
+    s.push(acc = fn(acc, data));
+  });
+  this.connect(['error', 'end'], s);
+  return s;
+};
+
+/**
+ * Returns a estream that filters non-error data.
+ * Does not catch errors that occur in the filtering function,
+ * for that use safeFilter in modules.
+ *
+ * __Signature__: `(a -> Boolean) -> estream a -> estream a`
+ *
+ * @name filter
+ * @param {Function} fn - the filtering function
+ * @return {estream}
+ *
+ * @example
+ * var estream1 = ES();
+ * var mEstream = estream1.filter(isEven);
+ */
+Estream.prototype.filter = function(fn) {
+  var s = createEstream();
+  this.on('data', function(data) {
+    if (fn(data)) {
+      s.push(data);
+    }
+  });
+  this.connect(['error', 'end'], s);
+  return s;
+};
 
 /**
  * Create a new estream and update parent estreams if passed.
