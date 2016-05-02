@@ -1,23 +1,23 @@
-var curryN = require('ramda/src/curryN');
+var uuid = require('node-uuid');
 var EVENT_TYPES = ['data', 'error', 'end'];
 
 // Default settings for new streams;
-var keepHistory = false;
+var keepHistory = true;
 var startFlowing = true;
 
-function wrapError(error, sourceStream) {
+function wrapError(error, estreamId) {
   return {
     value: error,
     esType: 'error',
-    source: sourceStream
+    id: estreamId
   };
 }
 
-function wrapData(data, sourceStream) {
+function wrapData(data, estreamId) {
   return {
     value: data,
     esType: 'data',
-    source: sourceStream
+    id: estreamId
   };
 }
 
@@ -115,6 +115,7 @@ function filter(fn, parentEstream) {
  */
 function Estream() {
   this.sourceCount = 0;
+  this.id = uuid.v4();
   this._isFlowing = startFlowing;
   this._lastIndex = 0;
   this._keepHistory = keepHistory;
@@ -162,10 +163,10 @@ Estream.prototype._updateHistory = function(message) {
  *
  * @name _emitData
  * @param {*} data
- * @param {Estream} sourceStream - the estream emitting the data
+ * @param {String} estreamId - id of the estream emitting the data
  * @private
  */
-Estream.prototype._emitData = function(data, sourceStream) {
+Estream.prototype._emitData = function(data, estreamId) {
   if (this._ended) {
     return;
   }
@@ -174,11 +175,11 @@ Estream.prototype._emitData = function(data, sourceStream) {
   }
   if (this._isFlowing) {
     this.consumers.data.forEach(function(consumer) {
-      consumer(data, sourceStream);
+      consumer(data, estreamId);
     });
   }
   if (this._keepHistory) {
-    this._updateHistory(wrapData(data, (sourceStream === this) ? null : sourceStream));
+    this._updateHistory(wrapData(data, estreamId));
   }
 };
 
@@ -188,10 +189,10 @@ Estream.prototype._emitData = function(data, sourceStream) {
  *
  * @name _emitError
  * @param {*} err
- * @param {Estream} sourceStream - the estream emitting the error
+ * @param {String} estreamId - id of the estream emitting the data
  * @private
  */
-Estream.prototype._emitError = function(err, sourceStream) {
+Estream.prototype._emitError = function(err, estreamId) {
   if (this._ended) {
     return;
   }
@@ -200,11 +201,11 @@ Estream.prototype._emitError = function(err, sourceStream) {
   }
   if (this._isFlowing) {
     this.consumers.error.forEach(function(consumer) {
-      consumer(err, sourceStream);
+      consumer(err, estreamId);
     });
   }
   if (this._keepHistory) {
-    this._updateHistory(wrapError(err, (sourceStream === this) ? null : sourceStream));
+    this._updateHistory(wrapError(err, estreamId));
   }
 };
 
@@ -242,8 +243,8 @@ Estream.prototype._emitEnd = function() {
  * var estream = ES();
  * estream1.push(5);
  */
-Estream.prototype.push = function(data, sourceStream) {
-  this._emitData(data, sourceStream || this);
+Estream.prototype.push = function(data, estreamId) {
+  this._emitData(data, estreamId || this.id);
 };
 
 /**
@@ -259,8 +260,8 @@ Estream.prototype.push = function(data, sourceStream) {
  * var estream = ES();
  * estream1.error(5);
  */
-Estream.prototype.error = function(error, sourceStream) {
-  this._emitError(error, sourceStream || this);
+Estream.prototype.error = function(error, estreamId) {
+  this._emitError(error, estreamId || this.id);
 };
 
 /**
@@ -406,11 +407,8 @@ Estream.prototype.off = function(type, consumer) {
 };
 
 /**
- * Sets the _keepHistory property.
+ * Sets the _keepHistory property. Set to true by default.
  * If this is set to true then an Estream keeps a record of all it's pushed data and errors.
- * It's a good idea to use this only for debugging only,
- * as history messages keep references to parent/source streams,
- * which can amount to a lot of data in memory.
  *
  * @name keepHistory
  * @param {Boolean} keep
@@ -549,9 +547,6 @@ function setOptions(options) {
 
 createEstream.addEstreamMethods = addEstreamMethods;
 createEstream.setOptions = setOptions;
-createEstream.map = curryN(2, map);
-createEstream.scan = curryN(3, scan);
-createEstream.filter = curryN(2, filter);
 
 module.exports = createEstream;
 

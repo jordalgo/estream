@@ -1,9 +1,10 @@
 {
-  "name": "piping-hot",
+  "name": "estream",
   "version": "0.1.0",
-  "description": "A javascript library with a simplified take on hot observables.",
+  "description": "A javascript library with a simplified take on event streams.",
   "main": "estream.js",
   "dependencies": {
+    "node-uuid": "^1.4.7",
     "ramda": "^0.21.0"
   },
   "devDependencies": {
@@ -20,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jordalgo/piping-hot.git"
+    "url": "https://github.com/jordalgo/estream.git"
   },
   "keywords": [
     "functional",
@@ -31,7 +32,7 @@
   "author": "Jordan Rome",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jordalgo/piping-hot/issues"
+    "url": "https://github.com/jordalgo/estream/issues"
   },
-  "homepage": "https://github.com/jordalgo/piping-hot"
+  "homepage": "https://github.com/jordalgo/estream"
 }
