@@ -6,15 +6,15 @@ A javascript utility library for working with stream-like events in the browser.
 
 ## Summary
 
-Estreams work similar to Node read/write streams in that you can listen for data, errors, and end events coming through the streams. You can push new data into the streams by calling `push` on your stream and passing in a piece of data or an error `new Error('boom')`. If there are consumers of the stream (or connected streams) it will pass along the data to them, otherwise the data is lost. However, you can buffer this data into memory calling `setBuffer(true)` if you want to save all the events for later consumption.
+Estreams work similar to Node read streams in that you can listen for data, errors, and end events coming through the streams and send data via `push`, errors with `error` and end with, well, `end`. The big difference between estreams and node streams is that estreams don't have a buffer but rather a history. Events unlike single files, which you might process with a read stream, are not meant to be treated as a single unit. Estreams also don't have a current "value", they keep track of what is passed through them (errors and data) in chronological order so that you can debug them easily, pull specific segments of the history, and replay the stream. Streams, by default, have their history on, but you can turn this off if you don't have a need to keep a record of the events.
 
 ## Combining Estreams
 
-Combining estreams is very easy. All you have to do is pass the streams you want to merge as arguments when you create a new stream e.g. `var s3 = ES(s1, s2)`: this wil flow data and errors from both s1 and s2 into s3.
+Combining estreams is very easy. All you have to do is pass the streams you want to merge as arguments when you create a new stream e.g. `var estream3 = ES(estream1, estream2)`: this wil flow data and errors from both estream1 and estream2 into estream3.
 
 ## Estream Endings
 
-To end an estream just call `push` without any arguments, e.g. `s.push();`. When a stream ends, all consumer references are removed so you don't have to call `off`. Also, if an estream has multiple parent estreams then the child estream won't emit an end until all of the parent estreams have ended.
+When a stream ends, all consumer references are removed so you don't have to explicitly call `off` (think unsubscribe). Also, if an estream has multiple parent estreams then the child estream won't emit an end until all of the parent estreams have ended.
 
 ## Removing a Consumer
 
@@ -87,4 +87,4 @@ This library was inspired by my own need to create a predictable way to work wit
 
 ## Credits
 
-I was heavily influenced by (and probably directly stole code) from [flyd](https://github.com/paldepind/flyd), [highland](http://highlandjs.org), and [RxJs](https://github.com/Reactive-Extensions/RxJS).
+I was heavily influenced by (and probably directly stole code) from [flyd](https://github.com/paldepind/flyd), [highland](http://highlandjs.org), [RxJs](https://github.com/Reactive-Extensions/RxJS), and [Bacon](https://baconjs.github.io/)

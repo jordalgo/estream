@@ -1,21 +1,3 @@
-# addEstream
-
-Add a child estream to a parent
-
-**Signature**: `Estream b -> estream a`
-
-**Parameters**
-
--   `s` **estream** the estream to add as a child estream.
-
-**Examples**
-
-```javascript
-var estream1 = ES();
-var estream2 = ES();
-estream1.addEstream(estream2);
-```
-
 # addEstreamMethods
 
 Add methods to the base estream object.
@@ -56,18 +38,13 @@ var estream4 = estream1.addSources(estream2, estream3);
 
 The Estream Object. To create use the exposed factory function.
 
-## batchByCount
+## clearHistory
 
-Returns an Estream that batches data by count into the buffer.
-Sets buffer to false when the count reaches 0 and emits the batched data.
-
-**Signature**: `Number -> estream a`
+Clear the history queue.
 
 **Parameters**
 
--   `count` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** the amount to batch
-
-Returns **Estream** 
+-   `clearHistory`  
 
 # createEstream
 
@@ -83,6 +60,11 @@ var estream2 = ES(estream1);
 ```
 
 Returns **estream** the pipe
+
+# drain
+
+Drain any history messages that have accumulated while estream is paused
+and turns flowing on.
 
 # endOnError
 
@@ -114,15 +96,27 @@ var mEstream = ES.filter(isEven, estream1);
 
 Returns **estream** 
 
-# map
+# getHistory
 
-Exposed Functions
-That are also added to the Estream prototype.
+Get data out of the history
 
 **Parameters**
 
--   `fn`  
--   `parentEstream`  
+-   `start` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** when to start in reading from the history
+-   `end` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** when to end when reading from the history
+
+Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** an array of historyed events
+
+# keepHistory
+
+Sets the \_keepHistory property. Set to true by default.
+If this is set to true then an Estream keeps a record of all it's pushed data and errors.
+
+**Parameters**
+
+-   `keep` **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean)** 
+
+Returns **Estream** 
 
 # map
 
@@ -148,11 +142,21 @@ var mEstream = ES.map(add1, estream);
 
 Returns **Estream** 
 
+# map
+
+Exposed Functions
+That are also added to the Estream prototype.
+
+**Parameters**
+
+-   `fn`  
+-   `parentEstream`  
+
 # off
 
 Removes a consumer from a estream.
-If the stream has data in the buffer,
-the consuming functions will start receiving the data in the buffer on nextTick.
+If the stream has data in the history,
+the consuming functions will start receiving the data in the history on nextTick.
 
 **Signature**: `(a -> *) -> Estream a`
 
@@ -175,8 +179,8 @@ Returns **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 # on
 
 Adds a consumer to a estream.
-If the stream has data in the buffer,
-the consuming functions will start receiving the data in the buffer on nextTick.
+If the stream has data in the history,
+the consuming functions will start receiving the data in the history on nextTick.
 
 **Signature**: `(a -> *) -> Estream a`
 
@@ -198,8 +202,8 @@ Returns **Estream**
 
 # pause
 
-Set \_isFlowing property to false. If an estream is not flowing then any value pushed;
-into an Estream will be stored in memory (in pushed order) until there is a consumer.
+Set \_isFlowing property to false. If an estream is not flowing then any value pushed
+into an Estream will be stored in the history unless history is off.
 
 Returns **Estream** 
 
@@ -223,8 +227,7 @@ estream1.end();
 
 # push
 
-Pushes an end down stream.
-After a stream ends no more errors or data can be pushed down stream.
+Pushes an error down stream
 
 **Signature**: `a -> Estream`
 
@@ -237,7 +240,7 @@ After a stream ends no more errors or data can be pushed down stream.
 
 ```javascript
 var estream = ES();
-estream1.end();
+estream1.error(5);
 ```
 
 # push
@@ -260,7 +263,8 @@ estream1.push(5);
 
 # push
 
-Pushes an error down stream
+Pushes an end down stream.
+After a stream ends no more errors or data can be pushed down stream.
 
 **Signature**: `a -> Estream`
 
@@ -273,115 +277,13 @@ Pushes an error down stream
 
 ```javascript
 var estream = ES();
-estream1.error(5);
+estream1.end();
 ```
-
-# reroute
-
-Reroutes an estream to a passed function.
-This effectively breaks an estream chain
-and puts the responsiblity of reconnecting it
-on the passed function.
-
-**Signature**: `(Estream a -> estream b -> *) -> Estream b`
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the function that takes the parent and new estream
-
-**Examples**
-
-```javascript
-var estream1 = ES();
-estream1.reroute(function(parentEstream, childEstream) {
- parentEstream.on({
-   data: function() {
-     // do something async
-     childEstream.push(asyncValue);
-   }
- });
-});
-```
-
-Returns **Estream** 
 
 # resume
 
 Set \_isFlowing property to true. If an estream is not flowing then any value pushed
-into an Estream will be stored in memory (in pushed order) until there is a consumer.
-
-Returns **Estream** 
-
-# safeFilter
-
-Returns an Estream that safely filters data
-by wrapping the applied function in a try/catch.
-Sending errors down the stream when there is an error.
-
-**Signature**: `(a -> Boolean) -> estream a -> estream a`
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the filtering function
--   `parentEstream` **estream** the parent estream
-
-**Examples**
-
-```javascript
-var estream1 = ES();
-var mEstream = estream1.filter(isEven);
-// or
-var mEstream = ES.filter(isEven, estream1);
-```
-
-Returns **estream** 
-
-# safeMap
-
-Returns an Estream that safely maps data
-by wrapping the applied function in a try/catch.
-Sending errors down the stream when there is an error.
-
-**Signature**: `(a -> b) -> Estream a -> Estream b`
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the mapping function
--   `parentEstream` **Estream** 
-
-**Examples**
-
-```javascript
-var estream = ES();
-var mEstream = estream.safeMap(add1);
-// or
-var mEstream = ES.safeMap(add1, estream);
-```
-
-Returns **Estream** 
-
-# safeScan
-
-Returns an Estream that safely scans data
-by wrapping the applied function in a try/catch.
-Sending errors down the stream when there is an error.
-
-**Signature**: `(b -> a -> c) -> b -> Estream a -> Estream c`
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the reducing function
--   `acc` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** intial value
--   `parentEstream` **Estream** the parent pipe
-
-**Examples**
-
-```javascript
-var estream1 = ES();
-var sEstream = estream1.safeScan(sum, 0);
-// or
-var sEstream = ES.safeScan(sum, 0, estream1);
-```
+into an Estream will be stored in the history unless history is off.
 
 Returns **Estream** 
 
