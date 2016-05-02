@@ -6,7 +6,7 @@ A javascript utility library for working with stream-like events in the browser.
 
 ## Summary
 
-Estreams work similar to Node read streams in that you can listen for data, errors, and end events coming through the streams and send data via `push`, errors with `error` and end with, well, `end`. The big difference between estreams and node streams is that estreams don't have a buffer but rather a history. Events unlike single files, which you might process with a read stream, are not meant to be treated as a single unit. Estreams also don't have a current "value", they keep track of what is passed through them (errors and data) in chronological order so that you can debug them easily, pull specific segments of the history, and replay the stream. Streams, by default, have their history on, but you can turn this off if you don't have a need to keep a record of the events.
+Estreams work similar to Node read streams in that you can listen for data, errors, and end events coming through the streams and send data via `push`, errors with `error` and end with, well, `end`. The big difference between estreams and node streams is that estreams don't have a buffer but rather a **history**. Events unlike single files, which you might process with a read stream, are not meant to be treated as a single unit. Also, Estreams don't have a current "value", they keep track of what is passed through them (errors and data) in chronological order so that you can debug them easily, pull specific segments of the history, and replay the stream. Streams, by default, have their history on, but you can turn this off if you don't have a need to keep track of the events.
 
 ## Combining Estreams
 
@@ -16,70 +16,54 @@ Combining estreams is very easy. All you have to do is pass the streams you want
 
 When a stream ends, all consumer references are removed so you don't have to explicitly call `off` (think unsubscribe). Also, if an estream has multiple parent estreams then the child estream won't emit an end until all of the parent estreams have ended.
 
-## Removing a Consumer
-
-```javascript
-var dataConsumer = function(x) {
-  console.log('I got data: ', x);
-};
-
-s.on('data', dataConsumer);
-s.off('data', dataConsumer);
-```
-
 ## Examples:
 
 Basic Example:
 ```javascript
 var ES = require('estreams');
-var s = ES();
+var estream = ES();
 
-s
-.on('data', function(x) {
+estream.on('data', function(x) {
   console.log('I got some data: ', x);
 })
 .on('error', function(x) {
   console.log('I got an error: ', x.message);
 })
 .on('end', function() {
-  console.log('The stream ended');
+  console.log('The estream ended');
 });
 
 
-pipe1.push(5);
-pipe1.next(new Error('boom'));
-pipe1.push(); // calling push with no value is how you end an estream.
+estream.push(5);
+estream.error(new Error('boom'));
+estream.end();
 ```
 
 Chained Transformation:
 ```javascript
-var s = ES();
+var estream = ES();
 
-s
+estream
 .map(add1)
 .scan(sum, 10)
 .on('data', function(x) {
   console.log(x);
 });
 
-s.push(5);
-// 16 logs in the console
+estream.push(5);
+// logs "16" to the console
 ```
 
-Buffering Data:
+Removing a Consumer
 ```javascript
-var s = ES();
+var dataConsumer = function(x) {
+  console.log('I got data: ', x);
+};
 
-s.setBuffer(true);
-s.push(5).push(6).push(10);
-
-setTimeout(function() {
-  s.on('data', function(x) {
-    console.log(x);
-  });
-}, 2000);
-// [5, 6, 10]
+estream.on('data', dataConsumer);
+estream.off('data', dataConsumer);
 ```
+
 
 ## Inspiration
 
