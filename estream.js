@@ -44,14 +44,15 @@ function wrapData(data, estreamId) {
  * var estream1 = ES();
  *
  * @constructor
+ * @param {Object} opts - stream options
  */
-function Estream() {
-  this.sourceCount = 0;
+function Estream(opts) {
   this.id = uuid.v4();
   this._isFlowing = startFlowing;
   this._lastIndex = 0;
   this._keepHistory = keepHistory;
   this.history = [];
+  this.sources = [];
   this.consumers = {
     data: [],
     error: [],
@@ -160,8 +161,8 @@ Estream.prototype._emitEnd = function() {
     return;
   }
   this.consumers.end.forEach(function(consumer) {
-    consumer();
-  });
+    consumer(this.id);
+  }.bind(this));
   Object.keys(this.consumers).forEach(function(key) {
     this.consumers[key] = [];
   }.bind(this));
@@ -226,12 +227,16 @@ Estream.prototype.end = function() {
  *
  * @name _parentEnd
  * @private
+ * @param {String} estreamId
  */
-Estream.prototype._parentEnd = function() {
-  if (this.sourceCount < 2) {
+Estream.prototype._parentEnd = function(estreamId) {
+  var foundId = this.sources.indexOf(estreamId);
+  if (foundId !== -1) {
+    this.sources.splice(foundId, 1);
+  }
+  if (this.sources.length === 0) {
     this._emitEnd();
   }
-  this.sourceCount--;
 };
 
 /**
@@ -251,13 +256,19 @@ Estream.prototype.connect = function(eventTypes, childStream) {
   eventTypes.forEach(function(event) {
     if (event === 'end') {
       this.on(event, childStream._parentEnd.bind(childStream));
-      childStream.sourceCount++;
+      childStream.addSource(this.id);
     } else if (event === 'data') {
       this.on(event, childStream.push.bind(childStream));
     } else {
       this.on(event, childStream.error.bind(childStream));
     }
   }.bind(this));
+};
+
+Estream.prototype.addSource = function(estreamId) {
+  if (this.sources.indexOf(estreamId) === -1) {
+    this.sources.push(estreamId);
+  }
 };
 
 /**
