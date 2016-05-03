@@ -32,7 +32,7 @@ describe('Estream', function() {
   it('can have multiple source estreams', function(done) {
     var s1 = ES();
     var s2 = ES();
-    var s3 = ES(s1, s2);
+    var s3 = ES([s1, s2]);
     var called = 0;
 
     s3
@@ -68,7 +68,7 @@ describe('Estream', function() {
   });
 
   it('drains data into consumers and resumes flowing', function(done) {
-    var s = ES();
+    var s = ES(null, { keepHistory: true });
     var called = 0;
     s.pause();
     s.push(3);
@@ -88,8 +88,8 @@ describe('Estream', function() {
   });
 
   it('returns history with `getHistory`', function() {
-    var s = ES();
-    var s2 = ES(s);
+    var s = ES(null, { keepHistory: true });
+    var s2 = ES([s], { keepHistory: true });
     s2.push(3);
     s.push(5);
     s2.push(4);
@@ -120,8 +120,8 @@ describe('Estream', function() {
   });
 
   it('clears the history with `clearHistory`', function() {
-    var s = ES();
-    var s2 = ES(s);
+    var s = ES(null, { keepHistory: true });
+    var s2 = ES([s], { keepHistory: true });
     s2.push(3);
     s.push(5);
     s2.push(4);

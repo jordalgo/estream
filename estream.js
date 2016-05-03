@@ -1,9 +1,12 @@
 var uuid = require('node-uuid');
+var merge = require('ramda/src/merge');
 var EVENT_TYPES = ['data', 'error', 'end'];
 
-// Default settings for new streams;
-var keepHistory = true;
-var startFlowing = true;
+var defaultOptions = {
+  keepHistory: false,
+  startFlowing: true,
+  removeConsumersOnEnd: true
+};
 
 /**
  * Add metadata to errors for history replay.
@@ -47,10 +50,12 @@ function wrapData(data, estreamId) {
  * @param {Object} opts - stream options
  */
 function Estream(opts) {
+  var options = merge(defaultOptions, opts || {});
   this.id = uuid.v4();
-  this._isFlowing = startFlowing;
+  this._isFlowing = options.startFlowing;
+  this._keepHistory = options.keepHistory;
+  this._removeConsumersOnEnd = options.removeConsumersOnEnd;
   this._lastIndex = 0;
-  this._keepHistory = keepHistory;
   this.history = [];
   this.sources = [];
   this.consumers = {
@@ -163,9 +168,11 @@ Estream.prototype._emitEnd = function() {
   this.consumers.end.forEach(function(consumer) {
     consumer(this.id);
   }.bind(this));
-  Object.keys(this.consumers).forEach(function(key) {
-    this.consumers[key] = [];
-  }.bind(this));
+  if (this._removeConsumersOnEnd) {
+    Object.keys(this.consumers).forEach(function(key) {
+      this.consumers[key] = [];
+    }.bind(this));
+  }
   this._ended = true;
 };
 
@@ -275,7 +282,7 @@ Estream.prototype.addSource = function(estreamId) {
  * Creates a new estream with x amount of parent estreams.
  *
  * @name addSources
- * @param {estream} args - a list of pipes
+ * @param {estream} args - a list of estreams
  *
  * @example
  * var estream1 = ES();
@@ -519,15 +526,13 @@ Estream.prototype.filter = function(fn) {
  * var estream1 = ES();
  * var estream2 = ES(estream1);
  */
-function createEstream() {
-  var sources = Array.prototype.slice.call(arguments);
-  if (Array.isArray(sources[0])) {
-    sources = sources[0];
+function createEstream(sources, options) {
+  var estream = new Estream(options);
+  if (sources && Array.isArray(sources)) {
+    sources.forEach(function(source) {
+      source.connect(EVENT_TYPES, estream);
+    });
   }
-  var estream = new Estream();
-  sources.forEach(function(source) {
-    source.connect(EVENT_TYPES, estream);
-  });
   return estream;
 }
 
@@ -555,17 +560,18 @@ function addEstreamMethods(addedMethods) {
   });
 }
 
-function setOptions(options) {
-  if (options.hasOwnProperty('keepHistory')) {
-    keepHistory = options.keepHistory;
-  }
-  if (options.hasOwnProperty('startFlowing')) {
-    startFlowing = options.startFlowing;
+function setDefaultOptions(options) {
+  if (options.debug) {
+    defaultOptions.keepHistory = true;
+    defaultOptions.startFlowing = true;
+    defaultOptions.removeConsumersOnEnd = false;
+  } else {
+    defaultOptions = merge(defaultOptions, options);
   }
 }
 
 createEstream.addEstreamMethods = addEstreamMethods;
-createEstream.setOptions = setOptions;
+createEstream.setDefaultOptions = setDefaultOptions;
 
 module.exports = createEstream;
 

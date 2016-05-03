@@ -6,11 +6,11 @@ A javascript utility library for working with stream-like events in the browser.
 
 ## Summary
 
-Estreams work similar to Node read streams in that you can listen for data, errors, and end events coming through the streams and send data via `push`, errors with `error` and end with, well, `end`. The big difference between estreams and node streams is that estreams don't have a buffer but rather a **history**. Events unlike single files, which you might process with a read stream, are not meant to be treated as a single unit. Also, Estreams don't have a current "value", they keep track of what is passed through them (errors and data) in chronological order so that you can debug them easily, pull specific segments of the history, and replay the stream. Streams, by default, have their history on, but you can turn this off if you don't have a need to keep track of the events.
+Estreams work similar to Node read streams in that you can listen for data, errors, and end events coming through the streams and send data via `push`, errors with `error` and end with, well, `end`. The big difference between estreams and node streams is that estreams don't have a buffer but rather a **history**. Events unlike single files, which you might process with a read stream, are not meant to be treated as a single unit. Also, Estreams don't have a current "value", they keep track of what is passed through them (errors and data) in chronological order so that you can debug them easily, pull specific segments of the history, and replay the stream. Streams, by default, have their history turned off.
 
 ## Combining Estreams
 
-Combining estreams is very easy. All you have to do is pass the streams you want to merge as arguments when you create a new stream e.g. `var estream3 = ES(estream1, estream2)`: this wil flow data and errors from both estream1 and estream2 into estream3.
+Combining estreams is very easy. All you have to do is pass the streams you want to merge as arguments when you create a new stream e.g. `var estream3 = ES([estream1, estream2])`: this wil flow data and errors from both estream1 and estream2 into estream3.
 
 ## Estream Endings
 
@@ -64,6 +64,23 @@ estream.on('data', dataConsumer);
 estream.off('data', dataConsumer);
 ```
 
+## Estream Options
+* keepHistory
+Default: false
+When true the estream keeps a record of all data and errors that pass through it, which you can get by calling `getHistory`.
+* startFlowing
+Default: true
+Sets the estream into flowing mode, meaning that an estream will notify consumers of events (data, error, end) that pass through.
+* removeConsumersOnEnd
+Default: true
+This removes the references to all of an estream's consumers so that they can be garbage collected.
+
+Example:
+```javascript
+var estream = ES(null, { keepHistory: true, removeConsumersOnEnd: false });
+```
+
+In addition you can put all estreams in `debug` mode which means they will startFlowing, keepHistory, and not removeConsumersOnEnd. `ES.setDefaultOptions({ debug: true });`.
 
 ## Inspiration
 
