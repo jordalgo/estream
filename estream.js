@@ -9,34 +9,20 @@ var defaultOptions = {
 };
 
 /**
- * Add metadata to errors for history replay.
- *
- * @private
- * @param {*} error
- * @param {String} estreamId
- * @return {Object}
- */
-function wrapError(error, estreamId) {
-  return {
-    value: error,
-    esType: 'error',
-    id: estreamId
-  };
-}
-
-/**
  * Add metadata to data for history replay.
  *
  * @private
+ * @param {String} event - 'data' or 'error'
  * @param {*} data
  * @param {String} estreamId
  * @return {Object}
  */
-function wrapData(data, estreamId) {
+function wrapEvent(event, value, estreamId) {
   return {
-    value: data,
-    esType: 'data',
-    id: estreamId
+    value: value,
+    esType: event,
+    id: estreamId,
+    time: new Date().getTime()
   };
 }
 
@@ -123,7 +109,7 @@ Estream.prototype._emitData = function(data, estreamId) {
     });
   }
   if (this._keepHistory) {
-    this._updateHistory(wrapData(data, estreamId));
+    this._updateHistory(wrapEvent('data', data, estreamId));
   }
 };
 
@@ -149,7 +135,7 @@ Estream.prototype._emitError = function(err, estreamId) {
     });
   }
   if (this._keepHistory) {
-    this._updateHistory(wrapError(err, estreamId));
+    this._updateHistory(wrapEvent('error', err, estreamId));
   }
 };
 
@@ -174,6 +160,9 @@ Estream.prototype._emitEnd = function() {
     }.bind(this));
   }
   this._ended = true;
+  if (this._keepHistory) {
+    this._updateHistory(wrapEvent('end', null, this.id));
+  }
 };
 
 /**
@@ -318,7 +307,7 @@ Estream.prototype.on = function(type, consumer) {
     throw new Error('Event type does not exist: ', type);
   }
   if (!this.history.length && this._ended) {
-    throw new Error('The estream has ended and the history is empty.');
+    console.warn('The estream has ended and the history is empty.');
   }
   if (this.consumers[type].indexOf(consumer) === -1) {
     this.consumers[type].push(consumer);
@@ -386,12 +375,12 @@ Estream.prototype.drain = function() {
   this.history.slice(this._lastIndex, this.history.length).forEach(function(data) {
     if (data.esType && data.esType === 'error') {
       this.consumers.error.forEach(function(consumer) {
-        consumer(data.value, data.source || this);
+        consumer(data.value, data.id || this.id);
       });
       this._emitError(data.value, data.sourceStream);
     } else {
       this.consumers.data.forEach(function(consumer) {
-        consumer(data.value, data.source || this);
+        consumer(data.value, data.id || this.id);
       });
     }
   }.bind(this));
@@ -436,6 +425,37 @@ Estream.prototype.endOnError = function() {
   });
   this.connect(['data', 'end'], s);
   return s;
+};
+
+
+Estream.prototype._replayEvent = function(count, interval) {
+  var end = this.history.length - 1;
+  var data = this.history[count];
+  var id = data.id || this.id;
+  this.consumers[data.esType].forEach(function(consumer) {
+    consumer(data.value, id);
+  });
+  ++count;
+  if (count < end || count === end) {
+    var nextInterval = (this.history[count + 1]) ?
+      (this.history[count + 1].time - data.time) : 0;
+    setTimeout(this._replayEvent.bind(this, count, interval), interval || nextInterval);
+  }
+};
+
+
+/**
+ * Replay a streams events.
+ * This will switch a stream back on and reflow all the events
+ * in the history at that passed in interval.
+ *
+ *
+ * @name replay
+ * @param {Number} interval - the time between each replayed event
+ * @param {Number} start - where to start in the history replay
+ */
+Estream.prototype.replay = function(interval, start) {
+  setTimeout(this._replayEvent.bind(this, start || 0, interval), interval || 0);
 };
 
 /**

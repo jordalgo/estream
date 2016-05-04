@@ -2,6 +2,10 @@
 
 The Estream Object. To create use the exposed factory function.
 
+**Parameters**
+
+-   `opts` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** stream options
+
 **Examples**
 
 ```javascript
@@ -42,7 +46,7 @@ Creates a new estream with x amount of parent estreams.
 
 **Parameters**
 
--   `args` **estream** a list of pipes
+-   `args` **estream** a list of estreams
 
 **Examples**
 
@@ -202,6 +206,42 @@ Returns **Estream**
 
 # push
 
+Pushes data down stream.
+
+**Signature**: `a -> estream`
+
+**Parameters**
+
+-   `value` **Any** the value
+-   `Estream`  
+
+**Examples**
+
+```javascript
+var estream = ES();
+estream1.push(5);
+```
+
+# push
+
+Pushes an error down stream
+
+**Signature**: `a -> Estream`
+
+**Parameters**
+
+-   `value` **Any** the error
+-   `Estream`  
+
+**Examples**
+
+```javascript
+var estream = ES();
+estream1.error(5);
+```
+
+# push
+
 Pushes an end down stream.
 After a stream ends no more errors or data can be pushed down stream.
 
@@ -237,41 +277,16 @@ var estream = ES();
 estream1.end();
 ```
 
-# push
+# replay
 
-Pushes data down stream.
-
-**Signature**: `a -> estream`
-
-**Parameters**
-
--   `value` **Any** the value
--   `Estream`  
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.push(5);
-```
-
-# push
-
-Pushes an error down stream
-
-**Signature**: `a -> Estream`
+Replay a streams events.
+This will switch a stream back on and reflow all the events
+in the history at that passed in interval.
 
 **Parameters**
 
--   `value` **Any** the error
--   `Estream`  
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.error(5);
-```
+-   `interval` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** the time between each replayed event
+-   `start` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** where to start in the history replay
 
 # resume
 

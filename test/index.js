@@ -138,6 +138,71 @@ describe('Estream', function() {
     assert.deepEqual(history, []);
   });
 
+  describe('replay', function() {
+    it('can replay the event history', function(done) {
+      var s = ES(null, { keepHistory: true });
+      var called = 0;
+
+      s.push(3);
+      s.push(4);
+      s.push(5);
+      s.push(6);
+      s.error(new Error('boom'));
+      s.end();
+
+      s.on('data', function(x) {
+        assert.equal(x, called + 3);
+        called++;
+      })
+      .on('error', function(x) {
+        assert.equal(called, 4);
+        assert.equal(x.message, 'boom');
+        called++;
+      })
+      .on('end', function() {
+        assert.equal(called, 5);
+        done();
+      });
+
+      s.replay(10);
+    });
+
+    it('can replay the event history based on when they occurred', function(done) {
+      var s = ES(null, { keepHistory: true });
+      var called = 0;
+      var trackedTime;
+
+      s.push(3);
+
+      setTimeout(function() {
+        s.push(4);
+
+        setTimeout(function() {
+          s.error(new Error('boom'));
+
+          s.on('data', function(x) {
+            assert.equal(x, called + 3);
+            if (called === 0) {
+              trackedTime = new Date().getTime();
+            } else {
+              assert.ok(new Date().getTime() - trackedTime < 1000);
+              trackedTime = new Date().getTime();
+            }
+            called++;
+          })
+          .on('error', function(x) {
+            assert.equal(called, 2);
+            assert.equal(x.message, 'boom');
+            assert.ok(new Date().getTime() - trackedTime < 1000);
+            done();
+          });
+
+          s.replay(10);
+        }, 500);
+      }, 500);
+    });
+  });
+
   it('does not buffers messages with flowing on (default)', function(done) {
     var s = ES();
     var called = 0;
