@@ -52,32 +52,10 @@ function Estream(opts) {
 }
 
 /**
- * Set _isFlowing property to false. If an estream is not flowing then any value pushed
- * into it will be stored in the history (if _keepHistory is also true).
- *
- * @name pause
- * @return {Estream}
+ * Private Methods
  */
-Estream.prototype.pause = function() {
-  this._isFlowing = false;
-  return this;
-};
 
 /**
- * Set _isFlowing property to true. If an estream is not flowing then any value pushed
- * into it will be stored in the history (if _keepHistory is also true).
- *
- * @name resume
- * @return {Estream}
- */
-Estream.prototype.resume = function() {
-  this._isFlowing = true;
-  return this;
-};
-
-/**
- * Update the history array with either a wrapped data or a wrapped error.
- *
  * @private
  * @param {Object} message - wrapped data or wrapped error
  */
@@ -89,71 +67,58 @@ Estream.prototype._updateHistory = function(message) {
 };
 
 /**
- * Emit a non-error, non-end value or history it into memory.
- *
- * @name _emitData
+ * @private
  * @param {*} data
  * @param {String} estreamId - id of the estream emitting the data
+ */
+Estream.prototype._processData = function(data, estreamId) {
+  if (this._ended) return;
+  if (this._isFlowing) this._emitData(data, estreamId);
+  if (this._keepHistory) this._updateHistory(wrapEvent('data', data, estreamId));
+};
+
+/**
  * @private
+ * @param {*} data
+ * @param {String} estreamId - id of the estream emitting the data
  */
 Estream.prototype._emitData = function(data, estreamId) {
-  if (this._ended) {
-    return;
-  }
-  if (!this._isFlowing && !this._keepHistory) {
-    return;
-  }
-  if (this._isFlowing) {
-    this.consumers.data.forEach(function(consumer) {
-      consumer(data, estreamId);
-    });
-  }
-  if (this._keepHistory) {
-    this._updateHistory(wrapEvent('data', data, estreamId));
-  }
+  this.consumers.data.forEach(function(consumer) {
+    consumer(data, estreamId, this, this.off.bind(this, 'data', consumer));
+  }.bind(this));
 };
 
 /**
- * Emit an error value
- * if there are any consumers of error messages.
- *
- * @name _emitError
+ * @private
  * @param {*} err
  * @param {String} estreamId - id of the estream emitting the data
- * @private
  */
-Estream.prototype._emitError = function(err, estreamId) {
-  if (this._ended) {
-    return;
-  }
-  if (!this._isFlowing && !this._keepHistory) {
-    return;
-  }
-  if (this._isFlowing) {
-    this.consumers.error.forEach(function(consumer) {
-      consumer(err, estreamId);
-    });
-  }
-  if (this._keepHistory) {
-    this._updateHistory(wrapEvent('error', err, estreamId));
-  }
+Estream.prototype._processError = function(err, estreamId) {
+  if (this._ended) return;
+  if (this._isFlowing) this._emitError(err, estreamId);
+  if (this._keepHistory) this._updateHistory(wrapEvent('error', err, estreamId));
 };
 
 /**
- * Pass a end value down the estream.
- * Once a end is passed, a estream does not pass any more
- * data or error values and it severs all its consumers.
- *
- * @name _end
  * @private
+ * @param {*} err
+ * @param {String} estreamId - id of the estream emitting the data
  */
-Estream.prototype._emitEnd = function() {
+Estream.prototype._emitError = function(err, estreamId) {
+  this.consumers.error.forEach(function(consumer) {
+    consumer(err, estreamId, this, this.off.bind(this, 'error', consumer));
+  }.bind(this));
+};
+
+/**
+ * @private
+ * @name _processEnd
+ */
+Estream.prototype._processEnd = function() {
   if (this._ended) {
     return;
   }
-  this.consumers.end.forEach(function(consumer) {
-    consumer(this.id);
-  }.bind(this));
+  this._emitEnd();
   if (this._removeConsumersOnEnd) {
     Object.keys(this.consumers).forEach(function(key) {
       this.consumers[key] = [];
@@ -166,7 +131,78 @@ Estream.prototype._emitEnd = function() {
 };
 
 /**
- * Pushes data down stream.
+ * @private
+ */
+Estream.prototype._emitEnd = function() {
+  this.consumers.end.forEach(function(consumer) {
+    consumer(this.id, this, this.off.bind(this, 'end', consumer));
+  }.bind(this));
+};
+
+/**
+ * @private
+ * @param {String} estreamId
+ */
+Estream.prototype._parentEnd = function(estreamId) {
+  var foundId = this.sources.indexOf(estreamId);
+  if (foundId !== -1) {
+    this.sources.splice(foundId, 1);
+  }
+  if (this.sources.length === 0) {
+    this._processEnd();
+  }
+};
+
+/**
+ * @private
+ * @param {Number} count
+ * @param {Number} interval
+ */
+Estream.prototype._replayEvent = function(count, interval) {
+  var end = this.history.length - 1;
+  var data = this.history[count];
+  var id = data.id || this.id;
+  this.consumers[data.esType].forEach(function(consumer) {
+    consumer(data.value, id);
+  });
+  ++count;
+  if (count < end || count === end) {
+    var nextInterval = (this.history[count + 1]) ?
+      (this.history[count + 1].time - data.time) : 0;
+    setTimeout(this._replayEvent.bind(this, count, interval), interval || nextInterval);
+  }
+};
+
+/**
+ * Public Methods
+ */
+
+/**
+ * Set _isFlowing property to false.
+ * If a stream is not flowing it will not notify consumers of data and errors.
+ *
+ * @name pause
+ * @return {Estream}
+ */
+Estream.prototype.pause = function() {
+  this._isFlowing = false;
+  return this;
+};
+
+/**
+ * Set _isFlowing property to true.
+ * If a stream is not flowing it will not notify consumers of data and errors.
+ *
+ * @name resume
+ * @return {Estream}
+ */
+Estream.prototype.resume = function() {
+  this._isFlowing = true;
+  return this;
+};
+
+/**
+ * Pushes data down the estream.
  *
  * __Signature__: `a -> estream`
  *
@@ -179,11 +215,11 @@ Estream.prototype._emitEnd = function() {
  * estream1.push(5);
  */
 Estream.prototype.push = function(data, estreamId) {
-  this._emitData(data, estreamId || this.id);
+  this._processData(data, estreamId || this.id);
 };
 
 /**
- * Pushes an error down stream
+ * Pushes an error down the estream
  *
  * __Signature__: `a -> Estream`
  *
@@ -196,11 +232,11 @@ Estream.prototype.push = function(data, estreamId) {
  * estream1.error(5);
  */
 Estream.prototype.error = function(error, estreamId) {
-  this._emitError(error, estreamId || this.id);
+  this._processError(error, estreamId || this.id);
 };
 
 /**
- * Pushes an end down stream.
+ * Pushes an end event down the estream.
  * After a stream ends no more errors or data can be pushed down stream.
  *
  * __Signature__: `a -> Estream`
@@ -214,25 +250,7 @@ Estream.prototype.error = function(error, estreamId) {
  * estream1.end();
  */
 Estream.prototype.end = function() {
-  this._emitEnd();
-};
-
-/**
- * This function is passed as an observer to parent estreams.
- * So if there are multiple parent estreams we don't end when only one ends.
- *
- * @name _parentEnd
- * @private
- * @param {String} estreamId
- */
-Estream.prototype._parentEnd = function(estreamId) {
-  var foundId = this.sources.indexOf(estreamId);
-  if (foundId !== -1) {
-    this.sources.splice(foundId, 1);
-  }
-  if (this.sources.length === 0) {
-    this._emitEnd();
-  }
+  this._processEnd();
 };
 
 /**
@@ -286,8 +304,6 @@ Estream.prototype.addSources = function() {
 
 /**
  * Adds a consumer to a estream.
- * If the stream has data in the history,
- * the consuming functions will start receiving the data in the history on nextTick.
  *
  * __Signature__: `(a -> *) -> Estream a`
  *
@@ -298,7 +314,7 @@ Estream.prototype.addSources = function() {
  *
  * @example
  * var estream1 = es();
- * var off = estream1.on('data', function(x) {
+ * estream1.on('data', function(x, estreamId, estream1, unsubscribe) {
  *   console.log('got some data', x);
  * });
  */
@@ -317,8 +333,6 @@ Estream.prototype.on = function(type, consumer) {
 
 /**
  * Removes a consumer from a estream.
- * If the stream has data in the history,
- * the consuming functions will start receiving the data in the history on nextTick.
  *
  * __Signature__: `(a -> *) -> Estream a`
  *
@@ -329,9 +343,9 @@ Estream.prototype.on = function(type, consumer) {
  *
  * @example
  * var estream1 = es();
- * var off = estream1.off('data', function(x) {
- *   console.log('got some data', x);
- * });
+ * var onData = function(x) { console.log(x); };
+ * estream1.on('data', onData);
+ * estream1.off('data', onData);
  */
 Estream.prototype.off = function(type, consumer) {
   if (EVENT_TYPES.indexOf(type) === -1) {
@@ -349,6 +363,17 @@ Estream.prototype.off = function(type, consumer) {
     return true;
   }
   return false;
+};
+
+/**
+ * An alias for calling `on('data', consumer)`.
+ *
+ * @name forEach
+ * @param {Function} consumer - the consuming function
+ * @return {Estream}
+ */
+Estream.prototype.forEach = function(consumer) {
+  return this.on('data', consumer);
 };
 
 /**
@@ -377,7 +402,6 @@ Estream.prototype.drain = function() {
       this.consumers.error.forEach(function(consumer) {
         consumer(data.value, data.id || this.id);
       });
-      this._emitError(data.value, data.sourceStream);
     } else {
       this.consumers.data.forEach(function(consumer) {
         consumer(data.value, data.id || this.id);
@@ -393,7 +417,7 @@ Estream.prototype.drain = function() {
  * @name getHistory
  * @param {Number} start - when to start in reading from the history
  * @param {Number} end - when to end when reading from the history
- * @return {Array} - an array of historyed events
+ * @return {Array} - an array of history events
  */
 Estream.prototype.getHistory = function(start, end) {
   return this.history.slice(start || 0, end || this.history.length);
@@ -426,23 +450,6 @@ Estream.prototype.endOnError = function() {
   this.connect(['data', 'end'], s);
   return s;
 };
-
-
-Estream.prototype._replayEvent = function(count, interval) {
-  var end = this.history.length - 1;
-  var data = this.history[count];
-  var id = data.id || this.id;
-  this.consumers[data.esType].forEach(function(consumer) {
-    consumer(data.value, id);
-  });
-  ++count;
-  if (count < end || count === end) {
-    var nextInterval = (this.history[count + 1]) ?
-      (this.history[count + 1].time - data.time) : 0;
-    setTimeout(this._replayEvent.bind(this, count, interval), interval || nextInterval);
-  }
-};
-
 
 /**
  * Replay a streams events.

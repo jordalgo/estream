@@ -67,6 +67,37 @@ describe('Estream', function() {
     s2.end();
   });
 
+  it('passes unsubscribe functions to consumers when events are emitted', function(done) {
+    var s = ES();
+    var dataCalled;
+    var errorCalled;
+
+    s.on('data', function(x, id, estream, unsubscribe) {
+      assert.equal(x, 1);
+      if (!dataCalled) {
+        dataCalled = true;
+        unsubscribe();
+      } else {
+        assert.fail();
+      }
+    })
+    .on('error', function(x, id, estream, unsubscribe) {
+      assert.equal(x.message, 'boom');
+      if (!errorCalled) {
+        errorCalled = true;
+        unsubscribe();
+      } else {
+        assert.fail();
+      }
+    });
+
+    s.push(1);
+    s.push(2);
+    s.error(new Error('boom'));
+    s.error(new Error('boom2'));
+    done();
+  });
+
   it('drains data into consumers and resumes flowing', function(done) {
     var s = ES(null, { keepHistory: true });
     var called = 0;

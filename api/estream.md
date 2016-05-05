@@ -13,6 +13,14 @@ var ES = require('estream');
 var estream1 = ES();
 ```
 
+## \_updateHistory
+
+Private Methods
+
+**Parameters**
+
+-   `message`  
+
 ## clearHistory
 
 Clear the history queue.
@@ -20,6 +28,10 @@ Clear the history queue.
 **Parameters**
 
 -   `clearHistory`  
+
+## pause
+
+Public Methods
 
 # addEstreamMethods
 
@@ -106,6 +118,16 @@ var mEstream = estream1.filter(isEven);
 
 Returns **estream** 
 
+# forEach
+
+An alias for calling `on('data', consumer)`.
+
+**Parameters**
+
+-   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
+
+Returns **Estream** 
+
 # getHistory
 
 Get data out of the history
@@ -115,7 +137,7 @@ Get data out of the history
 -   `start` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** when to start in reading from the history
 -   `end` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** when to end when reading from the history
 
-Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** an array of historyed events
+Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** an array of history events
 
 # keepHistory
 
@@ -152,8 +174,6 @@ Returns **Estream**
 # off
 
 Removes a consumer from a estream.
-If the stream has data in the history,
-the consuming functions will start receiving the data in the history on nextTick.
 
 **Signature**: `(a -> *) -> Estream a`
 
@@ -166,9 +186,9 @@ the consuming functions will start receiving the data in the history on nextTick
 
 ```javascript
 var estream1 = es();
-var off = estream1.off('data', function(x) {
-  console.log('got some data', x);
-});
+var onData = function(x) { console.log(x); };
+estream1.on('data', onData);
+estream1.off('data', onData);
 ```
 
 Returns **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean)** if the consumer was found and removed.
@@ -176,8 +196,6 @@ Returns **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 # on
 
 Adds a consumer to a estream.
-If the stream has data in the history,
-the consuming functions will start receiving the data in the history on nextTick.
 
 **Signature**: `(a -> *) -> Estream a`
 
@@ -190,7 +208,7 @@ the consuming functions will start receiving the data in the history on nextTick
 
 ```javascript
 var estream1 = es();
-var off = estream1.on('data', function(x) {
+estream1.on('data', function(x, estreamId, estream1, unsubscribe) {
   console.log('got some data', x);
 });
 ```
@@ -199,14 +217,32 @@ Returns **Estream**
 
 # pause
 
-Set \_isFlowing property to false. If an estream is not flowing then any value pushed
-into it will be stored in the history (if \_keepHistory is also true).
+Set \_isFlowing property to false.
+If a stream is not flowing it will not notify consumers of data and errors.
 
 Returns **Estream** 
 
 # push
 
-Pushes data down stream.
+Connects a child Estream to a Parent Estream
+
+**Signature**: `[EVENT_TYPES] -> Estream a -> undefined`
+
+**Parameters**
+
+-   `eventTypes` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** 'data', 'error', 'end'
+-   `Estream`  
+
+**Examples**
+
+```javascript
+var estream = ES();
+estream1.end();
+```
+
+# push
+
+Pushes data down the estream.
 
 **Signature**: `a -> estream`
 
@@ -224,7 +260,7 @@ estream1.push(5);
 
 # push
 
-Pushes an error down stream
+Pushes an error down the estream
 
 **Signature**: `a -> Estream`
 
@@ -242,7 +278,7 @@ estream1.error(5);
 
 # push
 
-Pushes an end down stream.
+Pushes an end event down the estream.
 After a stream ends no more errors or data can be pushed down stream.
 
 **Signature**: `a -> Estream`
@@ -250,24 +286,6 @@ After a stream ends no more errors or data can be pushed down stream.
 **Parameters**
 
 -   `value` **Any** the error
--   `Estream`  
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.end();
-```
-
-# push
-
-Connects a child Estream to a Parent Estream
-
-**Signature**: `[EVENT_TYPES] -> Estream a -> undefined`
-
-**Parameters**
-
--   `eventTypes` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** 'data', 'error', 'end'
 -   `Estream`  
 
 **Examples**
@@ -290,8 +308,8 @@ in the history at that passed in interval.
 
 # resume
 
-Set \_isFlowing property to true. If an estream is not flowing then any value pushed
-into it will be stored in the history (if \_keepHistory is also true).
+Set \_isFlowing property to true.
+If a stream is not flowing it will not notify consumers of data and errors.
 
 Returns **Estream** 
 
