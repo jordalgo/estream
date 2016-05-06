@@ -3,9 +3,9 @@ var merge = require('ramda/src/merge');
 var EVENT_TYPES = ['data', 'error', 'end'];
 
 var defaultOptions = {
-  keepHistory: false,
-  startFlowing: true,
-  removeConsumersOnEnd: true
+  history: false,
+  flowing: true,
+  unsubscribeOnEnd: true
 };
 
 /**
@@ -38,9 +38,9 @@ function wrapEvent(event, value, estreamId) {
 function Estream(opts) {
   var options = merge(defaultOptions, opts || {});
   this.id = uuid.v4();
-  this._isFlowing = options.startFlowing;
-  this._keepHistory = options.keepHistory;
-  this._removeConsumersOnEnd = options.removeConsumersOnEnd;
+  this._isFlowing = options.flowing;
+  this._keepHistory = options.history;
+  this._unsubscribeOnEnd = options.unsubscribeOnEnd;
   this.history = [];
   this.sources = [];
   this.consumers = {
@@ -111,7 +111,7 @@ Estream.prototype._processEnd = function() {
     return;
   }
   this._emitEnd();
-  if (this._removeConsumersOnEnd) {
+  if (this._unsubscribeOnEnd) {
     Object.keys(this.consumers).forEach(function(key) {
       this.consumers[key] = [];
     }.bind(this));
@@ -574,9 +574,9 @@ function addEstreamMethods(addedMethods) {
 
 function setDefaultOptions(options) {
   if (options.debug) {
-    defaultOptions.keepHistory = true;
-    defaultOptions.startFlowing = true;
-    defaultOptions.removeConsumersOnEnd = false;
+    defaultOptions.history = true;
+    defaultOptions.flowing = true;
+    defaultOptions.unsubscribeOnEnd = false;
   } else {
     defaultOptions = merge(defaultOptions, options);
   }

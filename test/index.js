@@ -99,8 +99,8 @@ describe('Estream', function() {
   });
 
   it('returns history with `getHistory`', function() {
-    var s = ES(null, { keepHistory: true });
-    var s2 = ES([s], { keepHistory: true });
+    var s = ES(null, { history: true });
+    var s2 = ES([s], { history: true });
     s2.push(3);
     s.push(5);
     s2.push(4);
@@ -131,8 +131,8 @@ describe('Estream', function() {
   });
 
   it('clears the history with `clearHistory`', function() {
-    var s = ES(null, { keepHistory: true });
-    var s2 = ES([s], { keepHistory: true });
+    var s = ES(null, { history: true });
+    var s2 = ES([s], { history: true });
     s2.push(3);
     s.push(5);
     s2.push(4);
@@ -151,7 +151,7 @@ describe('Estream', function() {
 
   describe('replay', function() {
     it('can replay the event history', function(done) {
-      var s = ES(null, { keepHistory: true });
+      var s = ES(null, { history: true });
       var called = 0;
 
       s.push(3);
@@ -179,7 +179,7 @@ describe('Estream', function() {
     });
 
     it('can replay the event history based on when they occurred', function(done) {
-      var s = ES(null, { keepHistory: true });
+      var s = ES(null, { history: true });
       var called = 0;
       var trackedTime;
 
