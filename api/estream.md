@@ -61,8 +61,6 @@ var estream4 = estream1.addSources(estream2, estream3);
 
 Create a new estream and update parent estreams if passed.
 
-**Signature**: `Estream a -> estream b`
-
 **Examples**
 
 ```javascript
@@ -76,7 +74,7 @@ Returns **estream** the pipe
 
 Debounce data events.
 
-**Signature**: `Number -> Estream b`
+**Signature**: `Number -> Estream a`
 
 **Parameters**
 
@@ -96,6 +94,25 @@ Returns **Estream**
 Drain any history messages that have accumulated while estream is paused
 and turns flowing on.
 
+# end
+
+Pushes an end event down the estream.
+After a stream ends no more errors or data can be pushed down stream.
+
+**Signature**: `a -> Estream`
+
+**Parameters**
+
+-   `value` **Any** the error
+-   `Estream`  
+
+**Examples**
+
+```javascript
+var estream = ES();
+estream1.end();
+```
+
 # endOnError
 
 Returns an Estream that ends on any error.
@@ -104,13 +121,31 @@ Returns an Estream that ends on any error.
 
 Returns **estream** the estream that will end on error
 
+# error
+
+Pushes an error down the estream
+
+**Signature**: `a -> Estream`
+
+**Parameters**
+
+-   `value` **Any** the error
+-   `Estream`  
+
+**Examples**
+
+```javascript
+var estream = ES();
+estream1.error(5);
+```
+
 # filter
 
 Returns a estream that filters non-error data.
 Does not catch errors that occur in the filtering function,
 for that use safeFilter in modules.
 
-**Signature**: `(a -> Boolean) -> estream a -> estream a`
+**Signature**: `(a -> Boolean) -> estream a`
 
 **Parameters**
 
@@ -163,7 +198,7 @@ Returns an Estream that maps data.
 Does not catch errors that occur in the mapping function,
 for that use safeMap in modules.
 
-**Signature**: `(a -> b) -> Estream a -> Estream b`
+**Signature**: `(a -> b) -> Estream b`
 
 **Parameters**
 
@@ -249,43 +284,6 @@ estream1.push(5);
 
 # push
 
-Pushes an error down the estream
-
-**Signature**: `a -> Estream`
-
-**Parameters**
-
--   `value` **Any** the error
--   `Estream`  
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.error(5);
-```
-
-# push
-
-Pushes an end event down the estream.
-After a stream ends no more errors or data can be pushed down stream.
-
-**Signature**: `a -> Estream`
-
-**Parameters**
-
--   `value` **Any** the error
--   `Estream`  
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.end();
-```
-
-# push
-
 Connects a child Estream to a Parent Estream
 
 **Signature**: `[EVENT_TYPES] -> Estream a -> undefined`
@@ -294,13 +292,6 @@ Connects a child Estream to a Parent Estream
 
 -   `eventTypes` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** 'data', 'error', 'end'
 -   `Estream`  
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.end();
-```
 
 # replay
 
@@ -326,7 +317,7 @@ Returns a Estream that scans data.
 Does not catch errors that occur in the scanning (reducing) function,
 for that use safeScan in modules.
 
-**Signature**: `(b -> a -> c) -> b -> Estream a -> Estream c`
+**Signature**: `(b -> a -> c) -> b -> Estream b`
 
 **Parameters**
 

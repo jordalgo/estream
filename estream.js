@@ -215,7 +215,7 @@ Estream.prototype.push = function(data, estreamId) {
  *
  * __Signature__: `a -> Estream`
  *
- * @name push
+ * @name error
  * @param {*} value - the error
  * @param {Estream}
  *
@@ -233,7 +233,7 @@ Estream.prototype.error = function(error, estreamId) {
  *
  * __Signature__: `a -> Estream`
  *
- * @name push
+ * @name end
  * @param {*} value - the error
  * @param {Estream}
  *
@@ -253,10 +253,6 @@ Estream.prototype.end = function() {
  * @name push
  * @param {Array} eventTypes - 'data', 'error', 'end'
  * @param {Estream}
- *
- * @example
- * var estream = ES();
- * estream1.end();
  */
 Estream.prototype.connect = function(eventTypes, childStream) {
   eventTypes.forEach(function(event) {
@@ -462,7 +458,7 @@ Estream.prototype.replay = function(interval, start) {
  * Does not catch errors that occur in the mapping function,
  * for that use safeMap in modules.
  *
- * __Signature__: `(a -> b) -> Estream a -> Estream b`
+ * __Signature__: `(a -> b) -> Estream b`
  *
  * @name map
  * @param {Function} fn - the mapping function
@@ -486,7 +482,7 @@ Estream.prototype.map = function(fn) {
  * Does not catch errors that occur in the scanning (reducing) function,
  * for that use safeScan in modules.
  *
- * __Signature__: `(b -> a -> c) -> b -> Estream a -> Estream c`
+ * __Signature__: `(b -> a -> c) -> b -> Estream b`
  *
  * @name scan
  * @param {Function} fn - the reducing function
@@ -511,7 +507,7 @@ Estream.prototype.scan = function(fn, acc) {
  * Does not catch errors that occur in the filtering function,
  * for that use safeFilter in modules.
  *
- * __Signature__: `(a -> Boolean) -> estream a -> estream a`
+ * __Signature__: `(a -> Boolean) -> estream a`
  *
  * @name filter
  * @param {Function} fn - the filtering function
@@ -535,7 +531,7 @@ Estream.prototype.filter = function(fn) {
 /**
  * Debounce data events.
  *
- * __Signature__: `Number -> Estream b`
+ * __Signature__: `Number -> Estream a`
  *
  * @name debounce
  * @param {Number} interval - the debounce timeout amount
@@ -560,8 +556,6 @@ Estream.prototype.debounce = function(interval) {
 
 /**
  * Create a new estream and update parent estreams if passed.
- *
- * __Signature__: `Estream a -> estream b`
  *
  * @name createEstream
  * @param {Estream|Array} - an optional single or array of parent estreams
