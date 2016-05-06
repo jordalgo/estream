@@ -41,6 +41,7 @@ function Estream(opts) {
   this._isFlowing = options.flowing;
   this._keepHistory = options.history;
   this._unsubscribeOnEnd = options.unsubscribeOnEnd;
+  this._concatEnd = [];
   this.history = [];
   this.sources = [];
   this.consumers = {
@@ -105,12 +106,13 @@ Estream.prototype._emitError = function(err, estreamId) {
 /**
  * @private
  * @name _processEnd
+ * @param {*} value
  */
-Estream.prototype._processEnd = function() {
+Estream.prototype._processEnd = function(value) {
   if (this._ended) {
     return;
   }
-  this._emitEnd();
+  this._emitEnd(value);
   if (this._unsubscribeOnEnd) {
     Object.keys(this.consumers).forEach(function(key) {
       this.consumers[key] = [];
@@ -118,30 +120,32 @@ Estream.prototype._processEnd = function() {
   }
   this._ended = true;
   if (this._keepHistory) {
-    this._updateHistory(wrapEvent('end', null, this.id));
+    this._updateHistory(wrapEvent('end', value, this.id));
   }
 };
 
 /**
  * @private
  */
-Estream.prototype._emitEnd = function() {
+Estream.prototype._emitEnd = function(value) {
   this.consumers.end.forEach(function(consumer) {
-    consumer(this.id, this, this.off.bind(this, 'end', consumer));
+    consumer(value, this.id, this, this.off.bind(this, 'end', consumer));
   }.bind(this));
 };
 
 /**
  * @private
+ * @param {*} value
  * @param {String} estreamId
  */
-Estream.prototype._parentEnd = function(estreamId) {
+Estream.prototype._parentEnd = function(value, estreamId) {
   var foundId = this.sources.indexOf(estreamId);
   if (foundId !== -1) {
     this.sources.splice(foundId, 1);
+    this._concatEnd.push(value);
   }
   if (this.sources.length === 0) {
-    this._processEnd();
+    this._processEnd(this._concatEnd);
   }
 };
 
@@ -237,8 +241,8 @@ Estream.prototype.error = function(error, estreamId) {
  * var estream = ES();
  * estream1.end();
  */
-Estream.prototype.end = function() {
-  this._processEnd();
+Estream.prototype.end = function(value) {
+  this._processEnd(value);
 };
 
 /**

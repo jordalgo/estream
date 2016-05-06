@@ -54,7 +54,8 @@ describe('Estream', function() {
       assert.equal(x.message, 'error');
       assert.equal(streamId, s2.id);
     })
-    .on('end', function() {
+    .on('end', function(z) {
+      assert.deepEqual(z, ['hello', 'bye']);
       assert.equal(called, 4);
       done();
     });
@@ -63,8 +64,8 @@ describe('Estream', function() {
     s2.push(10);
     s3.push(20);
     s2.error(new Error('error'));
-    s1.end();
-    s2.end();
+    s1.end('hello');
+    s2.end('bye');
   });
 
   it('passes unsubscribe functions to consumers when events are emitted', function(done) {
