@@ -427,6 +427,26 @@ describe('Estream', function() {
     });
   });
 
+  describe('debounce', function() {
+    it('delays data events', function(done) {
+      var s = ES();
+      var val = 0;
+
+      s.debounce(500).on('data', function(data) {
+        val = data;
+      });
+
+      s.push(1);
+      s.push(2);
+      assert.equal(val, 0);
+
+      setTimeout(function() {
+        assert.equal(val, 2);
+        done();
+      }, 1000);
+    });
+  });
+
   describe('endOnError', function() {
     it('ends on an error', function(done) {
       var s1 = ES();

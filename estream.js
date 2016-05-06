@@ -52,10 +52,6 @@ function Estream(opts) {
 }
 
 /**
- * Private Methods
- */
-
-/**
  * @private
  * @param {Object} message - wrapped data or wrapped error
  */
@@ -172,10 +168,6 @@ Estream.prototype._replayEvent = function(count, interval) {
     setTimeout(this._replayEvent.bind(this, count, interval), interval || nextInterval);
   }
 };
-
-/**
- * Public Methods
- */
 
 /**
  * Set _isFlowing property to false.
@@ -535,6 +527,32 @@ Estream.prototype.filter = function(fn) {
     if (fn(data)) {
       s.push(data);
     }
+  });
+  this.connect(['error', 'end'], s);
+  return s;
+};
+
+/**
+ * Debounce data events.
+ *
+ * __Signature__: `Number -> Estream b`
+ *
+ * @name debounce
+ * @param {Number} interval - the debounce timeout amount
+ * @return {Estream}
+ *
+ * @example
+ * var estream = ES();
+ * var mEstream = estream.debounce(1000);
+ */
+Estream.prototype.debounce = function(interval) {
+  var s = createEstream();
+  var dataTO;
+  this.on('data', function(data) {
+    clearTimeout(dataTO);
+    dataTO = setTimeout(function() {
+      s.push(data);
+    }, interval);
   });
   this.connect(['error', 'end'], s);
   return s;

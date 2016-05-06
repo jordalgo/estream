@@ -13,14 +13,6 @@ var ES = require('estream');
 var estream1 = ES();
 ```
 
-## \_updateHistory
-
-Private Methods
-
-**Parameters**
-
--   `message`  
-
 ## clearHistory
 
 Clear the history queue.
@@ -28,10 +20,6 @@ Clear the history queue.
 **Parameters**
 
 -   `clearHistory`  
-
-## pause
-
-Public Methods
 
 # addEstreamMethods
 
@@ -83,6 +71,25 @@ var estream2 = ES(estream1);
 ```
 
 Returns **estream** the pipe
+
+# debounce
+
+Debounce data events.
+
+**Signature**: `Number -> Estream b`
+
+**Parameters**
+
+-   `interval` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** the debounce timeout amount
+
+**Examples**
+
+```javascript
+var estream = ES();
+var mEstream = estream.debounce(1000);
+```
+
+Returns **Estream** 
 
 # drain
 
@@ -224,24 +231,6 @@ Returns **Estream**
 
 # push
 
-Connects a child Estream to a Parent Estream
-
-**Signature**: `[EVENT_TYPES] -> Estream a -> undefined`
-
-**Parameters**
-
--   `eventTypes` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** 'data', 'error', 'end'
--   `Estream`  
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.end();
-```
-
-# push
-
 Pushes data down the estream.
 
 **Signature**: `a -> estream`
@@ -286,6 +275,24 @@ After a stream ends no more errors or data can be pushed down stream.
 **Parameters**
 
 -   `value` **Any** the error
+-   `Estream`  
+
+**Examples**
+
+```javascript
+var estream = ES();
+estream1.end();
+```
+
+# push
+
+Connects a child Estream to a Parent Estream
+
+**Signature**: `[EVENT_TYPES] -> Estream a -> undefined`
+
+**Parameters**
+
+-   `eventTypes` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** 'data', 'error', 'end'
 -   `Estream`  
 
 **Examples**
