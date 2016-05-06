@@ -98,26 +98,6 @@ describe('Estream', function() {
     done();
   });
 
-  it('drains data into consumers and resumes flowing', function(done) {
-    var s = ES(null, { keepHistory: true });
-    var called = 0;
-    s.pause();
-    s.push(3);
-
-    s.on('data', function(x) {
-      if (!called) {
-        assert.equal(x, 3);
-        called = true;
-      } else {
-        assert.equal(x, 5);
-        done();
-      }
-    });
-
-    s.drain();
-    s.push(5);
-  });
-
   it('returns history with `getHistory`', function() {
     var s = ES(null, { keepHistory: true });
     var s2 = ES([s], { keepHistory: true });

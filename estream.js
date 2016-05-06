@@ -41,7 +41,6 @@ function Estream(opts) {
   this._isFlowing = options.startFlowing;
   this._keepHistory = options.keepHistory;
   this._removeConsumersOnEnd = options.removeConsumersOnEnd;
-  this._lastIndex = 0;
   this.history = [];
   this.sources = [];
   this.consumers = {
@@ -56,9 +55,6 @@ function Estream(opts) {
  * @param {Object} message - wrapped data or wrapped error
  */
 Estream.prototype._updateHistory = function(message) {
-  if (this._isFlowing) {
-    this._lastIndex++;
-  }
   this.history.push(message);
 };
 
@@ -378,28 +374,6 @@ Estream.prototype.keepHistory = function(keep) {
 };
 
 /**
- * Drain any history messages that have accumulated while estream is paused
- * and turns flowing on.
- *
- * @name drain
- */
-Estream.prototype.drain = function() {
-  this._isFlowing = true;
-  this.history.slice(this._lastIndex, this.history.length).forEach(function(data) {
-    if (data.esType && data.esType === 'error') {
-      this.consumers.error.forEach(function(consumer) {
-        consumer(data.value, data.id || this.id);
-      });
-    } else {
-      this.consumers.data.forEach(function(consumer) {
-        consumer(data.value, data.id || this.id);
-      });
-    }
-  }.bind(this));
-  this._lastIndex = this.history.length;
-};
-
-/**
  * Get data out of the history
  *
  * @name getHistory
@@ -418,7 +392,6 @@ Estream.prototype.getHistory = function(start, end) {
  */
 Estream.prototype.clearHistory = function() {
   this.history = [];
-  this._lastIndex = 0;
 };
 
 /**
