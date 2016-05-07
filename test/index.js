@@ -428,6 +428,46 @@ describe('Estream', function() {
     });
   });
 
+  describe('reduce', function() {
+    it('reduces the values of a single stream', function(done) {
+      var s = ES();
+      var errorCalled;
+
+      s.reduce(sum, 0)
+      .on('error', function() {
+        errorCalled = true;
+      })
+      .on('end', function(value) {
+        assert.equal(value, 20);
+        assert.ok(errorCalled);
+        done();
+      });
+
+      s.push(5);
+      s.push(10);
+      s.error(new Error('blah'));
+      s.push(3);
+      s.end(2);
+    });
+
+    it('reduces the values of multiple streams', function(done) {
+      var s1 = ES();
+      var s2 = ES();
+      var s3 = ES([s1, s2]);
+
+      s3.reduce(sum, 0).on('end', function(value) {
+        assert.equal(value, 28);
+        done();
+      });
+
+      s1.push(5);
+      s2.push(10);
+      s1.push(3);
+      s1.end(4);
+      s2.end(6);
+    });
+  });
+
   describe('endOnError', function() {
     it('ends on an error', function(done) {
       var s1 = ES();

@@ -89,11 +89,6 @@ var mEstream = estream.debounce(1000);
 
 Returns **Estream** 
 
-# drain
-
-Drain any history messages that have accumulated while estream is paused
-and turns flowing on.
-
 # end
 
 Pushes an end event down the estream.
@@ -266,6 +261,17 @@ Returns **Estream**
 
 # push
 
+Connects a child Estream to a Parent Estream
+
+**Signature**: `[EVENT_TYPES] -> Estream a -> undefined`
+
+**Parameters**
+
+-   `eventTypes` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** 'data', 'error', 'end'
+-   `Estream`  
+
+# push
+
 Pushes data down the estream.
 
 **Signature**: `a -> estream`
@@ -282,16 +288,26 @@ var estream = ES();
 estream1.push(5);
 ```
 
-# push
+# reduce
 
-Connects a child Estream to a Parent Estream
+Returns a Estream that reduces all data and end values,
+emitting the final value on end.
 
-**Signature**: `[EVENT_TYPES] -> Estream a -> undefined`
+**Signature**: `(b -> a -> c) -> b -> Estream b`
 
 **Parameters**
 
--   `eventTypes` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** 'data', 'error', 'end'
--   `Estream`  
+-   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the reducing function
+-   `acc` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** intial value
+
+**Examples**
+
+```javascript
+var estream1 = ES();
+estream1.reduce(sum, 0).on('end', function(finalValue) {});
+```
+
+Returns **Estream** 
 
 # replay
 

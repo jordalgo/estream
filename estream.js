@@ -480,6 +480,40 @@ Estream.prototype.scan = function(fn, acc) {
 };
 
 /**
+ * Returns a Estream that reduces all data and end values,
+ * emitting the final value on end.
+ *
+ * __Signature__: `(b -> a -> c) -> b -> Estream b`
+ *
+ * @name reduce
+ * @param {Function} fn - the reducing function
+ * @param {Object} acc - intial value
+ * @return {Estream}
+ *
+ * @example
+ * var estream1 = ES();
+ * estream1.reduce(sum, 0).on('end', function(finalValue) {});
+ */
+Estream.prototype.reduce = function(fn, acc) {
+  var s = createEstream();
+  this.on('data', function(data) {
+    acc = fn(acc, data);
+    s.push(data);
+  });
+  this.on('end', function(value) {
+    if (value === void 0) {
+      s.end(acc);
+    } else if (Array.isArray(value)) {
+      s.end(value.reduce(fn, acc));
+    } else {
+      s.end(acc = fn(acc, value));
+    }
+  });
+  this.connect(['error'], s);
+  return s;
+};
+
+/**
  * Returns a estream that filters non-error data.
  * Does not catch errors that occur in the filtering function,
  * for that use safeFilter in modules.
