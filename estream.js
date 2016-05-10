@@ -142,7 +142,7 @@ Estream.prototype._parentEnd = function(value, estreamId) {
   var foundId = this.sources.indexOf(estreamId);
   if (foundId !== -1) {
     this.sources.splice(foundId, 1);
-    this._concatEnd.push(value);
+    this._concatEnd = this._concatEnd.concat(value);
   }
   if (this.sources.length === 0) {
     this._processEnd(this._concatEnd);
@@ -242,7 +242,7 @@ Estream.prototype.error = function(error, estreamId) {
  * estream1.end();
  */
 Estream.prototype.end = function(value) {
-  this._processEnd(value);
+  this._processEnd((arguments.length) ? [value] : []);
 };
 
 /**
@@ -501,13 +501,7 @@ Estream.prototype.reduce = function(fn, acc) {
     s.push(data);
   });
   this.on('end', function(value) {
-    if (value === void 0) {
-      s.end(acc);
-    } else if (Array.isArray(value)) {
-      s.end(value.reduce(fn, acc));
-    } else {
-      s.end(acc = fn(acc, value));
-    }
+    s.end(value.reduce(fn, acc));
   });
   this.connect(['error'], s);
   return s;
