@@ -2,19 +2,26 @@
 
 A javascript utility library for working with stream-like events in the browser.
 
-#### [Estream API](./api)
+#### [Estream API](./api/estream.md)
 
 ## Summary
 
-Estreams work similar to Node read streams in that you can listen for data, errors, and end events coming through the streams and send data via `push`, errors with `error` and end with, well, `end`. The big difference between estreams and node streams is that estreams don't have a buffer but rather a **history**. Events unlike single files, which you might process with a read stream, are not meant to be treated as a single unit. Also, Estreams don't have a current "value", they keep track of what is passed through them (errors and data) in chronological order so that you can debug them easily, pull specific segments of the history, and replay the stream. Streams, by default, have their history turned off.
+Estreams, or event streams, are a simpler* abstraction for listening to async events. Estreams deal with three different event types: data, error, and end or, more specifically EsData, EsError, and EsEnd.
+
+## Event Types
+
+#### EsData
+These are objects that are used to represent successful data. `estream.push(new ES.data('my val'))` or, the easier way, `estream.push('my val')`, which wraps the value in an EsData object. To listen to these events: `estream.on(function(x) { x.isData // true x.value // 'my val' });`.
+
+#### EsError
+These are objects that are used to represent an error, either from the source itself or internally in the stream. `estream.push(new ES.error('boom'))` or, the easier way, `estream.error('boom')`, which wraps the value in an EsError object. To listen to these events: `estream.on(function(x) { x.isError // true x.value // 'boom' });`.
+
+#### EsEnd
+These are objects that are used to represent an end to an estream. `estream.push(new ES.end('end'))` or, the easier way, `estream.end('end')`, which wraps the value in an EsEnd object. To listen to these events: `estream.on(function(x) { x.isEnd // true x.value // ['end'] });`. Once an end is emitted by a stream, no more events will be emitted and all references to the consuming functions will be removed.
 
 ## Combining Estreams
 
-Combining estreams is very easy. All you have to do is pass the streams you want to merge as arguments when you create a new stream e.g. `var estream3 = ES([estream1, estream2])`: this wil flow data and errors from both estream1 and estream2 into estream3.
-
-## Estream Endings
-
-When a stream ends, all consumer references are removed so you don't have to explicitly call `off` (think unsubscribe). Also, if an estream has multiple parent estreams then the child estream won't emit an end until all of the parent estreams have ended.
+Combining estreams is very easy. All you have to do is pass the streams you want to merge as arguments when you create a new stream e.g. `var estream3 = ES([estream1, estream2])`: this wil flow data and errors from both estream1 and estream2 into estream3. However, the combined stream will not end until all of it's parent or source estreams have ended e.g. `estream1.end(); estream2.end` will cause `estream3` to end and emit an end event.
 
 ## Examples:
 
@@ -23,20 +30,11 @@ Basic Example:
 var ES = require('estreams');
 var estream = ES();
 
-estream.on('data', function(x) {
-  console.log('I got some data: ', x);
-})
-.on('error', function(x) {
-  console.log('I got an error: ', x.message);
-})
-.on('end', function() {
-  console.log('The estream ended');
+estream.on(function(x) {
+  console.log('I got some data: ', x.value);
 });
 
-
 estream.push(5);
-estream.error(new Error('boom'));
-estream.end();
 ```
 
 Chained Transformation:
@@ -47,7 +45,7 @@ estream
 .map(add1)
 .scan(sum, 10)
 .on('data', function(x) {
-  console.log(x);
+  console.log(x.value);
 });
 
 estream.push(5);
@@ -60,27 +58,28 @@ var dataConsumer = function(x) {
   console.log('I got data: ', x);
 };
 
-estream.on('data', dataConsumer);
-estream.off('data', dataConsumer);
+var off = estream.on('data', function(x) {
+  // do something cool with data
+});
+off();
 ```
 
 ## Estream Options
-* keepHistory
+
+* history
 Default: false
-When true the estream keeps a record of all data and errors that pass through it, which you can get by calling `getHistory`.
-* startFlowing
+When true the Estream keeps a record of all events that pass through it, which you can get by calling `getHistory`.
+* buffer
 Default: true
-Sets the estream into flowing mode, meaning that an estream will notify consumers of events (data, error, end) that pass through.
-* removeConsumersOnEnd
+If the buffer is on and events are pushed into the Estream, then once a consumer is added, all the previous events will flow into the consumer as individual actions.
+* detach
 Default: true
 This removes the references to all of an estream's consumers so that they can be garbage collected.
 
 Example:
 ```javascript
-var estream = ES(null, { keepHistory: true, removeConsumersOnEnd: false });
+var estream = ES(null, { history: true, detach: false });
 ```
-
-In addition you can put all estreams in `debug` mode which means they will startFlowing, keepHistory, and not removeConsumersOnEnd. `ES.setDefaultOptions({ debug: true });`.
 
 ## Inspiration
 
