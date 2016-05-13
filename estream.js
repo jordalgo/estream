@@ -1,33 +1,87 @@
 var uuid = require('node-uuid');
 var merge = require('ramda/src/merge');
-var EVENT_TYPES = ['data', 'error', 'end'];
 
 var defaultOptions = {
   history: false,
-  flowing: true,
-  unsubscribeOnEnd: true
+  buffer: true,
+  detach: true
 };
 
 /**
- * Add metadata to data for history replay.
+ * Base Estream event object.
  *
  * @private
- * @param {String} event - 'data' or 'error'
- * @param {*} data
- * @param {String} estreamId
- * @return {Object}
+ * @constructor
+ * @param {*} value
+ * @param {String} id
  */
-function wrapEvent(event, value, estreamId) {
-  return {
-    value: value,
-    esType: event,
-    id: estreamId,
-    time: new Date().getTime()
-  };
+function EsEvent(value, id) {
+  this.value = value;
+  this.estreamId = id;
 }
+
+EsEvent.prototype.isData = false;
+EsEvent.prototype.isError = false;
+EsEvent.prototype.isEnd = false;
+
+EsEvent.prototype._setEstreamId = function(id) {
+  this.estreamId = id;
+};
+
+/**
+ * Estream Data Event object.
+ *
+ * @constructor
+ */
+function EsData() {
+  EsEvent.apply(this, arguments);
+}
+
+EsData.prototype = Object.create(EsEvent.prototype);
+EsData.prototype.constructor = EsData;
+EsData.prototype.isData = true;
+
+/**
+ * Estream Error Event object.
+ *
+ * @constructor
+ */
+function EsError() {
+  EsEvent.apply(this, arguments);
+}
+
+EsError.prototype = Object.create(EsEvent.prototype);
+EsError.prototype.constructor = EsError;
+EsError.prototype.isError = true;
+
+/**
+ * Estream End Event object.
+ * The value kept inside this object will always be an array
+ * since a stream can have multiple source/parent streams
+ * and we want to keep a list of all the end event values.
+ *
+ * @constructor
+ */
+function EsEnd() {
+  EsEvent.apply(this, arguments);
+  this.value = (arguments.length === 0) ? [] : [arguments[0]];
+}
+
+EsEnd.prototype = Object.create(EsEvent.prototype);
+EsEnd.prototype.constructor = EsEnd;
+EsEnd.prototype.isEnd = true;
+
+/**
+ * @private
+ * @param {EsEnd} esEnd
+ */
+EsEnd.prototype.concat = function(esEnd) {
+  this.value = this.value.concat(esEnd.value);
+};
 
 /**
  * The Estream Object. To create use the exposed factory function.
+ *
  * @example
  * var ES = require('estream');
  * var estream1 = ES();
@@ -38,114 +92,77 @@ function wrapEvent(event, value, estreamId) {
 function Estream(opts) {
   var options = merge(defaultOptions, opts || {});
   this.id = uuid.v4();
-  this._isFlowing = options.flowing;
+  this._lastSentIndex = 0;
+  this._isBuffering = options.buffer;
   this._keepHistory = options.history;
-  this._unsubscribeOnEnd = options.unsubscribeOnEnd;
-  this._concatEnd = [];
+  this._detach = options.detach;
+  this._concatEnd = new EsEnd();
+
   this.history = [];
   this.sources = [];
-  this.consumers = {
-    data: [],
-    error: [],
-    end: []
-  };
+  this.consumers = [];
 }
 
 /**
  * @private
- * @param {Object} message - wrapped data or wrapped error
- */
-Estream.prototype._updateHistory = function(message) {
-  this.history.push(message);
-};
-
-/**
- * @private
- * @param {*} data
+ * @param {EsEvent} event - EsData | EsError | EsEnd
  * @param {String} estreamId - id of the estream emitting the data
  */
-Estream.prototype._processData = function(data, estreamId) {
+Estream.prototype._processEvent = function(esEvent) {
   if (this._ended) return;
-  if (this._isFlowing) this._emitData(data, estreamId);
-  if (this._keepHistory) this._updateHistory(wrapEvent('data', data, estreamId));
-};
-
-/**
- * @private
- * @param {*} data
- * @param {String} estreamId - id of the estream emitting the data
- */
-Estream.prototype._emitData = function(data, estreamId) {
-  this.consumers.data.forEach(function(consumer) {
-    consumer(data, estreamId, this, this.off.bind(this, 'data', consumer));
-  }.bind(this));
-};
-
-/**
- * @private
- * @param {*} err
- * @param {String} estreamId - id of the estream emitting the data
- */
-Estream.prototype._processError = function(err, estreamId) {
-  if (this._ended) return;
-  if (this._isFlowing) this._emitError(err, estreamId);
-  if (this._keepHistory) this._updateHistory(wrapEvent('error', err, estreamId));
-};
-
-/**
- * @private
- * @param {*} err
- * @param {String} estreamId - id of the estream emitting the data
- */
-Estream.prototype._emitError = function(err, estreamId) {
-  this.consumers.error.forEach(function(consumer) {
-    consumer(err, estreamId, this, this.off.bind(this, 'error', consumer));
-  }.bind(this));
-};
-
-/**
- * @private
- * @name _processEnd
- * @param {*} value
- */
-Estream.prototype._processEnd = function(value) {
-  if (this._ended) {
-    return;
+  var updateHistory;
+  if (!esEvent.estreamId) esEvent._setEstreamId(this.id);
+  this._emitEvent(esEvent);
+  if (this._keepHistory) updateHistory = true;
+  if (!this.consumers.length && this._isBuffering) {
+    updateHistory = true;
+  } else {
+    this._lastSentIndex++;
   }
-  this._emitEnd(value);
-  if (this._unsubscribeOnEnd) {
-    Object.keys(this.consumers).forEach(function(key) {
-      this.consumers[key] = [];
-    }.bind(this));
-  }
-  this._ended = true;
-  if (this._keepHistory) {
-    this._updateHistory(wrapEvent('end', value, this.id));
+  if (updateHistory) this.history.push(esEvent);
+  if (esEvent.isEnd) {
+    if (this._detach) {
+      this.consumers = [];
+    }
+    this._ended = true;
   }
 };
 
 /**
  * @private
+ * @param {EsEvent} event - EsData | EsError | EsEnd
+ * @param {String} estreamId - id of the estream emitting the data
  */
-Estream.prototype._emitEnd = function(value) {
-  this.consumers.end.forEach(function(consumer) {
-    consumer(value, this.id, this, this.off.bind(this, 'end', consumer));
+Estream.prototype._emitEvent = function(event) {
+  this.consumers.forEach(function(obj) {
+    obj.fn(event, this, obj.unsubcribe);
   }.bind(this));
 };
 
 /**
  * @private
- * @param {*} value
- * @param {String} estreamId
+ * @param {EsEnd} esEnd
  */
-Estream.prototype._parentEnd = function(value, estreamId) {
-  var foundId = this.sources.indexOf(estreamId);
+Estream.prototype._parentEnd = function(esEnd) {
+  var foundId = this.sources.indexOf(esEnd.estreamId);
   if (foundId !== -1) {
     this.sources.splice(foundId, 1);
-    this._concatEnd = this._concatEnd.concat(value);
+    this._concatEnd.concat(esEnd);
   }
   if (this.sources.length === 0) {
-    this._processEnd(this._concatEnd);
+    this._processEvent(this._concatEnd);
+  }
+};
+
+/**
+ * Add a source/parent estream id to list of sources.
+ *
+ * @private
+ * @param {String} estreamId
+ */
+Estream.prototype._addSource = function(estreamId) {
+  if (this.sources.indexOf(estreamId) === -1) {
+    this.sources.push(estreamId);
   }
 };
 
@@ -170,31 +187,20 @@ Estream.prototype._replayEvent = function(count, interval) {
 };
 
 /**
- * Set _isFlowing property to false.
- * If a stream is not flowing it will not notify consumers of data and errors.
- *
- * @name pause
- * @return {Estream}
+ * @private
  */
-Estream.prototype.pause = function() {
-  this._isFlowing = false;
-  return this;
+Estream.prototype._emptyBuffer = function() {
+  var max = this.history.length;
+  this.history.slice(this._lastSentIndex, this.history.length).forEach(function(event) {
+    this.consumers.forEach(function(consumer) {
+      consumer.fn(event, consumer.unsubcribe);
+    });
+  }.bind(this));
+  this._lastSentIndex = max;
 };
 
 /**
- * Set _isFlowing property to true.
- * If a stream is not flowing it will not notify consumers of data and errors.
- *
- * @name resume
- * @return {Estream}
- */
-Estream.prototype.resume = function() {
-  this._isFlowing = true;
-  return this;
-};
-
-/**
- * Pushes data down the estream.
+ * Pushes an event down the estream.
  *
  * __Signature__: `a -> estream`
  *
@@ -206,8 +212,22 @@ Estream.prototype.resume = function() {
  * var estream = ES();
  * estream1.push(5);
  */
-Estream.prototype.push = function(data, estreamId) {
-  this._processData(data, estreamId || this.id);
+Estream.prototype.push = function(value) {
+  if (arguments.length === 0) {
+    return;
+  }
+  if (value) {
+    if (value.isError) {
+      this._processEvent(value);
+    } else if (value.isEnd) {
+      this._processEvent(value);
+    } else {
+      var wrappedValue = (value.isData) ? value : new EsData(value);
+      this._processEvent(wrappedValue);
+    }
+  } else {
+    this._processEvent(new EsData(value));
+  }
 };
 
 /**
@@ -224,7 +244,8 @@ Estream.prototype.push = function(data, estreamId) {
  * estream1.error(5);
  */
 Estream.prototype.error = function(error, estreamId) {
-  this._processError(error, estreamId || this.id);
+  var wrappedError = (error instanceof EsError) ? error : new EsError(error);
+  this._processEvent(wrappedError, estreamId || this.id);
 };
 
 /**
@@ -242,35 +263,25 @@ Estream.prototype.error = function(error, estreamId) {
  * estream1.end();
  */
 Estream.prototype.end = function(value) {
-  this._processEnd((arguments.length) ? [value] : []);
+  var wrappedEnd = (value instanceof EsEnd) ? value : new EsEnd(value);
+  this._processEvent(wrappedEnd);
 };
 
 /**
  * Connects a child Estream to a Parent Estream
  *
- * __Signature__: `[EVENT_TYPES] -> Estream a -> undefined`
- *
- * @name push
- * @param {Array} eventTypes - 'data', 'error', 'end'
- * @param {Estream}
+ * @name connect
+ * @param {Estream} childStream
  */
-Estream.prototype.connect = function(eventTypes, childStream) {
-  eventTypes.forEach(function(event) {
-    if (event === 'end') {
-      this.on(event, childStream._parentEnd.bind(childStream));
-      childStream.addSource(this.id);
-    } else if (event === 'data') {
-      this.on(event, childStream.push.bind(childStream));
+Estream.prototype.connect = function(childStream) {
+  this.on(function(value) {
+    if (value.isData || value.isError) {
+      childStream.push(value);
     } else {
-      this.on(event, childStream.error.bind(childStream));
+      childStream._parentEnd(value);
     }
-  }.bind(this));
-};
-
-Estream.prototype.addSource = function(estreamId) {
-  if (this.sources.indexOf(estreamId) === -1) {
-    this.sources.push(estreamId);
-  }
+  });
+  childStream._addSource(this.id);
 };
 
 /**
@@ -296,25 +307,30 @@ Estream.prototype.addSources = function() {
  * __Signature__: `(a -> *) -> Estream a`
  *
  * @name on
- * @param {String} type - event type (data, error, end)
  * @param {Function} consumer - the consuming function
  * @return {Estream}
  *
  * @example
  * var estream1 = es();
- * estream1.on('data', function(x, estreamId, estream1, unsubscribe) {
+ * estream1.on(function(x, estream1, unsubscribe) {
  *   console.log('got some data', x);
  * });
  */
-Estream.prototype.on = function(type, consumer) {
-  if (EVENT_TYPES.indexOf(type) === -1) {
-    throw new Error('Event type does not exist: ', type);
+Estream.prototype.on = function(consumer) {
+  if (typeof consumer !== 'function') {
+    throw new Error('Consumer needs to be a function.');
   }
   if (!this.history.length && this._ended) {
     console.warn('The estream has ended and the history is empty.');
   }
-  if (this.consumers[type].indexOf(consumer) === -1) {
-    this.consumers[type].push(consumer);
+  var found = this.consumers.some(function(obj) {
+    return obj.fn === consumer;
+  });
+  if (!found) {
+    this.consumers.push({ fn: consumer, unsubcribe: this.off.bind(this, consumer) });
+    if (this._isBuffering && (this._lastSentIndex < this.history.length)) {
+      setTimeout(this._emptyBuffer.bind(this), 0);
+    }
   }
   return this;
 };
@@ -325,43 +341,42 @@ Estream.prototype.on = function(type, consumer) {
  * __Signature__: `(a -> *) -> Estream a`
  *
  * @name off
- * @param {String} type - event type (data, error, end)
  * @param {Function} consumer - the consuming function
  * @return {Boolean} if the consumer was found and removed.
  *
  * @example
  * var estream1 = es();
- * var onData = function(x) { console.log(x); };
- * estream1.on('data', onData);
- * estream1.off('data', onData);
+ * var onEvent = function(x) { console.log(x); };
+ * estream1.on(onEvent);
+ * estream1.off(onEvent);
  */
-Estream.prototype.off = function(type, consumer) {
-  if (EVENT_TYPES.indexOf(type) === -1) {
-    throw new Error('Event type does not exist: ', type);
-  }
+Estream.prototype.off = function(consumer) {
   var foundIndex = -1;
-  for (var i = 0; i < this.consumers[type].length; ++i) {
-    if (this.consumers[type][i] === consumer) {
-      foundIndex = i;
-      break;
+  this.consumers.some(function(obj, index) {
+    if (obj.fn === consumer) {
+      foundIndex = index;
+      return true;
     }
-  }
+    return false;
+  });
   if (foundIndex !== -1) {
-    this.consumers[type].splice(foundIndex, 1);
+    this.consumers.splice(foundIndex, 1);
     return true;
   }
   return false;
 };
 
 /**
- * An alias for calling `on('data', consumer)`.
+ * A helper function for getting only data event values from Estreams.
  *
  * @name forEach
  * @param {Function} consumer - the consuming function
  * @return {Estream}
  */
 Estream.prototype.forEach = function(consumer) {
-  return this.on('data', consumer);
+  return this.on(function(event) {
+    consumer(event.value);
+  });
 };
 
 /**
@@ -431,11 +446,11 @@ Estream.prototype.replay = function(interval, start) {
 };
 
 /**
- * Returns an Estream that maps data.
- * Does not catch errors that occur in the mapping function,
- * for that use safeMap in modules.
+ * Returns an Estream that maps data events only.
+ * Catches errors that occur in the mapping fn
+ * and sends the error event down the Estream.
  *
- * __Signature__: `(a -> b) -> Estream b`
+ * __Signature__: `(a -> b) -> Estream EsEvent b`
  *
  * @name map
  * @param {Function} fn - the mapping function
@@ -447,17 +462,26 @@ Estream.prototype.replay = function(interval, start) {
  */
 Estream.prototype.map = function(fn) {
   var s = createEstream();
-  this.on('data', function(data) {
-    s.push(fn(data));
+  this.on(function(event) {
+    if (event.isData) {
+      var mappedValue;
+      try {
+        mappedValue = fn(event.value);
+        s.push(mappedValue);
+      } catch (e) {
+        s.error(e);
+      }
+    } else {
+      s.push(event);
+    }
   });
-  this.connect(['error', 'end'], s);
   return s;
 };
 
 /**
- * Returns a Estream that scans data.
- * Does not catch errors that occur in the scanning (reducing) function,
- * for that use safeScan in modules.
+ * Returns a Estream that scans data events only.
+ * Catches errors that occur in the reducing function
+ * and sends the error event down the Estream.
  *
  * __Signature__: `(b -> a -> c) -> b -> Estream b`
  *
@@ -472,10 +496,19 @@ Estream.prototype.map = function(fn) {
  */
 Estream.prototype.scan = function(fn, acc) {
   var s = createEstream();
-  this.on('data', function(data) {
-    s.push(acc = fn(acc, data));
+  this.on(function(event) {
+    if (event.isData) {
+      var nextAcc;
+      try {
+        nextAcc = fn(acc, event.value);
+        s.push(acc = nextAcc);
+      } catch (e) {
+        s.error(e);
+      }
+    } else {
+      s.push(event);
+    }
   });
-  this.connect(['error', 'end'], s);
   return s;
 };
 
@@ -574,7 +607,7 @@ function createEstream(sources, options) {
   var estream = new Estream(options);
   if (sources && Array.isArray(sources)) {
     sources.forEach(function(source) {
-      source.connect(EVENT_TYPES, estream);
+      source.connect(estream);
     });
   }
   return estream;
@@ -607,8 +640,8 @@ function addEstreamMethods(addedMethods) {
 function setDefaultOptions(options) {
   if (options.debug) {
     defaultOptions.history = true;
-    defaultOptions.flowing = true;
-    defaultOptions.unsubscribeOnEnd = false;
+    defaultOptions.buffer = true;
+    defaultOptions.detach = false;
   } else {
     defaultOptions = merge(defaultOptions, options);
   }
@@ -616,6 +649,8 @@ function setDefaultOptions(options) {
 
 createEstream.addEstreamMethods = addEstreamMethods;
 createEstream.setDefaultOptions = setDefaultOptions;
+createEstream.error = EsError;
+createEstream.end = EsEnd;
 
 module.exports = createEstream;
 
