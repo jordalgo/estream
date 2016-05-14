@@ -213,6 +213,26 @@ var mEstream = estream1.filter(isEven);
 
 Returns **estream** 
 
+# filterEvent
+
+Creates a new Estream that filters EsEvents themselves,
+as opposed to the data within an EsData event.
+
+**Parameters**
+
+-   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the filtering function
+
+**Examples**
+
+```javascript
+var estream1 = ES();
+estream1.filterEvent(function(e) {
+ return e.isData;
+});
+```
+
+Returns **Estream** 
+
 # forEach
 
 A helper function for getting only data event values from Estreams.
@@ -357,8 +377,6 @@ Returns **Estream**
 Replay a streams events.
 This will switch a stream back on and reflow all the events
 in the history at that passed in interval.
-
-TODO: fix this
 
 **Parameters**
 

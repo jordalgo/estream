@@ -583,6 +583,28 @@ Estream.prototype.filter = function(fn) {
 };
 
 /**
+ * Creates a new Estream that filters EsEvents themselves,
+ * as opposed to the data within an EsData event.
+ *
+ * @example
+ * var estream1 = ES();
+ * estream1.filterEvent(function(e) {
+ *  return e.isData;
+ * });
+ *
+ * @name filterEvent
+ * @param {Function} fn - the filtering function
+ * @return {Estream}
+ */
+Estream.prototype.filterEvent = function(fn) {
+  var s = createEstream();
+  this.on(function(event) {
+    if (fn(event)) s.push(event);
+  });
+  return s;
+};
+
+/**
  * Returns a Estream that reduces all data and end values,
  * emitting the final value on Estream end in an EsEnd object.
  *

@@ -410,6 +410,26 @@ describe('Estream', function() {
     });
   });
 
+  describe('filterEvent', function() {
+    it('filters events', function(done) {
+      var s = ES();
+
+      s.filterEvent(function (e) {
+        return e.isEnd;
+      })
+      .on(function(x) {
+        assert.ok(x.isEnd);
+        assert.deepEqual(x.value, ['end']);
+        done();
+      });
+
+      s.push(5);
+      s.push('hello');
+      s.error('boom');
+      s.end('end');
+    });
+  });
+
   describe('debounce', function() {
     it('delays all events', function(done) {
       var s = ES();
