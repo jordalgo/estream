@@ -6,7 +6,9 @@ A javascript utility library for working with stream-like events in the browser.
 
 ## Summary
 
-Estreams, or event streams, are a simpler* abstraction for listening to async events. Estreams deal with three different event types: data, error, and end or, more specifically EsData, EsError, and EsEnd.
+Estreams, or event streams, are a simple abstraction for listening to async events. Estreams deal with three different [event types](#event-types): data, error, and end. Estreams at their most basic are stateless transfer tools that just take in events and push them out to consumers. Unlike many other reactive libraries that conflate the concept of streams and observables and even data within static arrays, Estream tackles a single use-case and that is async events, which can happen once or continuously throughout the life-cycle of an app.
+
+Events, unlike chunks of data or a value that can change over time, require their own custom helpers. For example, instead of a buffer, where data is kept in chunks, events (and Estreams) have a history. Events are also immutable, which is why if you map over a piece of data from one event, it becomes another. Estreams can also replay events, combine event streams, and filter, scan, map, reduce, and debounce events.
 
 ## Event Types
 

@@ -474,9 +474,6 @@ Estream.prototype.endOnError = function() {
  * This will switch a stream back on and reflow all the events
  * in the history at that passed in interval.
  *
- * TODO: fix this
- *
- *
  * @name replay
  * @param {Number} interval - the time between each replayed event
  * @param {Number} start - where to start in the history replay
