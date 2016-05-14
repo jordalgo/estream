@@ -13,15 +13,7 @@ var ES = require('estream');
 var estream1 = ES();
 ```
 
-## clearHistory
-
-Remove all stored events from the history.
-
-**Parameters**
-
--   `clearHistory`  
-
-# addEstreamMethods
+# addMethods
 
 Add methods to the base estream object.
 
@@ -36,13 +28,13 @@ Add methods to the base estream object.
 ```javascript
 ES.addEstreamMethods({
  name: 'collect',
- fn: require('estream/modules/collect')(ES)
+ fn: function collect() {}
 });
 ```
 
 # addSources
 
-Creates a new estream with x amount of parent estreams.
+Creates a new estream with X amount of parent estreams.
 
 **Parameters**
 
@@ -59,6 +51,10 @@ var estream4 = estream1.addSources([estream2, estream3]);
 
 Returns **Estream** 
 
+# clearHistory
+
+Remove all stored events from the history.
+
 # EsEnd
 
 Estream End Event object.
@@ -73,18 +69,10 @@ If you don't push a value, the array is just empty.
 ```javascript
 var ES = require('estream');
 var estream1 = ES();
-estream1.push(new EsEnd('my end val'));
+estream1.push(new Es.End('my end val'));
 // or
 estream1.end('my end val'); // which wraps this value in an EsEnd object
 ```
-
-# connect
-
-Connects a child Estream to an Estream
-
-**Parameters**
-
--   `childStream` **Estream** 
 
 # createEstream
 
@@ -144,7 +132,7 @@ Returns **Estream**
 Returns a new Estream that ends on any error.
 The new Estream will have _this_ as a parent/source Estream.
 
-Returns **Estream** the estream that will end on error
+Returns **Estream** that will end on error
 
 # error
 
@@ -174,7 +162,7 @@ Estream Data Event object.
 ```javascript
 var ES = require('estream');
 var estream1 = ES();
-estream1.push(new EsData(5));
+estream1.push(new Es.Data(5));
 // or
 estream1.push(5); // which wraps this value in an EsData object
 ```
@@ -188,7 +176,7 @@ Estream Error Event object.
 ```javascript
 var ES = require('estream');
 var estream1 = ES();
-estream1.push(new EsError('bad thing'));
+estream1.push(new Es.Error('bad thing'));
 // or
 estream1.error('bad thing'); // which wraps this value in an EsError object
 ```
@@ -202,7 +190,7 @@ EsData, EsEvent, or EsEnd - which inherit from this base object.
 **Parameters**
 
 -   `value` **Any** 
--   `id` **[String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** (don't use) this param is populated by parent Estreams
+-   `id` **[String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** the EstreamId that is the original source of the event
 
 # filter
 

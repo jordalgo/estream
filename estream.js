@@ -14,7 +14,7 @@ var defaultOptions = {
  *
  * @constructor
  * @param {*} value
- * @param {String} id - (don't use) this param is populated by parent Estreams
+ * @param {String} id - the EstreamId that is the original source of the event
  */
 function EsEvent(value, id) {
   this.value = value;
@@ -35,7 +35,7 @@ EsEvent.prototype._setEstreamId = function(id) {
  * @example
  * var ES = require('estream');
  * var estream1 = ES();
- * estream1.push(new EsData(5));
+ * estream1.push(new Es.Data(5));
  * // or
  * estream1.push(5); // which wraps this value in an EsData object
  *
@@ -55,7 +55,7 @@ EsData.prototype.isData = true;
  * @example
  * var ES = require('estream');
  * var estream1 = ES();
- * estream1.push(new EsError('bad thing'));
+ * estream1.push(new Es.Error('bad thing'));
  * // or
  * estream1.error('bad thing'); // which wraps this value in an EsError object
  *
@@ -80,7 +80,7 @@ EsError.prototype.isError = true;
  * @example
  * var ES = require('estream');
  * var estream1 = ES();
- * estream1.push(new EsEnd('my end val'));
+ * estream1.push(new Es.End('my end val'));
  * // or
  * estream1.end('my end val'); // which wraps this value in an EsEnd object
  *
@@ -136,9 +136,13 @@ function Estream(opts) {
  */
 Estream.prototype._processEvent = function(esEvent) {
   if (this._ended) return;
+
   var updateHistory;
+
   if (!esEvent.estreamId) esEvent._setEstreamId(this.id);
+  Object.freeze(esEvent);
   this._emitEvent(esEvent);
+
   if (this._keepHistory) updateHistory = true;
   if (!this.consumers.length && this._isBuffering) {
     updateHistory = true;
@@ -301,6 +305,7 @@ Estream.prototype.end = function(value) {
 /**
  * Connects a child Estream to an Estream
  *
+ * @private
  * @name connect
  * @param {Estream} childStream
  */
@@ -316,7 +321,7 @@ Estream.prototype.connect = function(childStream) {
 };
 
 /**
- * Creates a new estream with x amount of parent estreams.
+ * Creates a new estream with X amount of parent estreams.
  *
  * @name addSources
  * @param {Array} estreams - an Array of estreams
@@ -440,7 +445,7 @@ Estream.prototype.getHistory = function(start, end) {
 /**
  * Remove all stored events from the history.
  *
- * @param clearHistory
+ * @name clearHistory
  */
 Estream.prototype.clearHistory = function() {
   this.history = [];
@@ -451,7 +456,7 @@ Estream.prototype.clearHistory = function() {
  * The new Estream will have _this_ as a parent/source Estream.
  *
  * @name endOnError
- * @return {Estream} the estream that will end on error
+ * @return {Estream} that will end on error
  */
 Estream.prototype.endOnError = function() {
   var s = createEstream();
@@ -650,13 +655,13 @@ Estream.prototype.debounce = function(interval) {
  *
  * __Signature__: `[Objects] -> undefined`
  *
- * @name addEstreamMethods
+ * @name addMethods
  * @param {Array} addedMethods - an array of objects
  *
  * @example
  * ES.addEstreamMethods({
  *  name: 'collect',
- *  fn: require('estream/modules/collect')(ES)
+ *  fn: function collect() {}
  * });
  */
 function addMethods(addedMethods) {
@@ -708,9 +713,9 @@ function createEstream(sources, options) {
 
 createEstream.addMethods = addMethods;
 createEstream.setDefaultOptions = setDefaultOptions;
-createEstream.error = EsError;
-createEstream.end = EsEnd;
-createEstream.data = EsData;
+createEstream.Error = EsError;
+createEstream.End = EsEnd;
+createEstream.Data = EsData;
 
 module.exports = createEstream;
 

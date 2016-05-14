@@ -10,14 +10,32 @@ Estreams, or event streams, are a simpler* abstraction for listening to async ev
 
 ## Event Types
 
-#### EsData
-These are objects that are used to represent successful data. `estream.push(new ES.data('my val'))` or, the easier way, `estream.push('my val')`, which wraps the value in an EsData object. To listen to these events: `estream.on(function(x) { x.isData // true x.value // 'my val' });`.
+#### [EsData](./api/estream.md#esdata)
+These are objects that are used to represent successful data. `estream.push(new ES.data('my val'))` or, the easier way, `estream.push('my val')`, which wraps the value in an EsData object. To listen to these events:
+```javascript
+estream.on(function(x) {
+  x.isData // true
+  x.value // 'my val'
+});
+```
 
-#### EsError
-These are objects that are used to represent an error, either from the source itself or internally in the stream. `estream.push(new ES.error('boom'))` or, the easier way, `estream.error('boom')`, which wraps the value in an EsError object. To listen to these events: `estream.on(function(x) { x.isError // true x.value // 'boom' });`.
+#### [EsError](./api/estream.md#eserror)
+These are objects that are used to represent an error, either from the source itself or internally in the stream. `estream.push(new ES.error('boom'))` or, the easier way, `estream.error('boom')`, which wraps the value in an EsError object. To listen to these events:
+```javascript
+estream.on(function(x) {
+  x.isError // true
+  x.value // 'boom'
+});
+```
 
-#### EsEnd
-These are objects that are used to represent an end to an estream. `estream.push(new ES.end('end'))` or, the easier way, `estream.end('end')`, which wraps the value in an EsEnd object. To listen to these events: `estream.on(function(x) { x.isEnd // true x.value // ['end'] });`. Once an end is emitted by a stream, no more events will be emitted and all references to the consuming functions will be removed.
+#### [EsEnd](./api/estream.md#esend)
+These are objects that are used to represent an end to an estream. `estream.push(new ES.end('end'))` or, the easier way, `estream.end('end')`, which wraps the value in an EsEnd object. Once an end is emitted by a stream, no more events will be emitted and all references to the consuming functions will be removed. To listen to these events:
+```javascript
+estream.on(function(x) {
+  x.isEnd // true
+  x.value // 'end'
+});
+```
 
 ## Combining Estreams
 
@@ -66,15 +84,9 @@ off();
 
 ## Estream Options
 
-* history
-Default: false
-When true the Estream keeps a record of all events that pass through it, which you can get by calling `getHistory`.
-* buffer
-Default: true
-If the buffer is on and events are pushed into the Estream, then once a consumer is added, all the previous events will flow into the consumer as individual actions.
-* detach
-Default: true
-This removes the references to all of an estream's consumers so that they can be garbage collected.
+* **history** (default: false): When true the Estream keeps a record of all events that pass through it, which you can get by calling `getHistory`.
+* **buffer** (default: true): If the buffer is on and events are pushed into the Estream, then once a consumer is added, all the previous events will flow into the consumer as individual actions.
+* **detach** (default: true): This removes the references to all of an estream's consumers so that they can be garbage collected.
 
 Example:
 ```javascript

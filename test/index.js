@@ -28,7 +28,7 @@ describe('Estream', function() {
       assert.equal(err.value, 'error');
       done();
     });
-    s.push(new ES.error('error'));
+    s.push(new ES.Error('error'));
   });
 
   it('routes ends', function(done) {
@@ -38,7 +38,7 @@ describe('Estream', function() {
       assert.deepEqual(end.value, ['byebye']);
       done();
     });
-    s.push(new ES.end('byebye'));
+    s.push(new ES.End('byebye'));
   });
 
   it('can have multiple source estreams', function(done) {
@@ -72,9 +72,9 @@ describe('Estream', function() {
     s1.push(1);
     s2.push(10);
     s3.push(20);
-    s2.push(new ES.error('error'));
-    s1.push(new ES.end('hello'));
-    s2.push(new ES.end('bye'));
+    s2.push(new ES.Error('error'));
+    s1.push(new ES.End('hello'));
+    s2.push(new ES.End('bye'));
   });
 
   it('ends if parent Estreams have not ended and end called explicitly', function() {
@@ -140,6 +140,18 @@ describe('Estream', function() {
     };
     s.on(dataConsumer);
     s.off(dataConsumer);
+    s.push(5);
+  });
+
+  it('freezes event objects that are emitted', function(done) {
+    var s = ES();
+
+    s.on(function(event) {
+      event.value = 'bad';
+      assert.equal(event.value, 5);
+      done();
+    });
+
     s.push(5);
   });
 
