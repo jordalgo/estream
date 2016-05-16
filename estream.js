@@ -8,6 +8,130 @@ var defaultOptions = {
 };
 
 /**
+ * @name off
+ * @private
+ * @param {Estream} estream
+ * @param {Function} consumer
+ * @return {Boolean}
+ */
+function off(estream, consumer) {
+  var foundIndex = -1;
+  estream.consumers.some(function(obj, index) {
+    if (obj.fn === consumer) {
+      foundIndex = index;
+      return true;
+    }
+    return false;
+  });
+  if (foundIndex !== -1) {
+    estream.consumers.splice(foundIndex, 1);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @private
+ * @param {Estream} estream
+ * @param {EsEvent} event - EsData | EsError | EsEnd
+ */
+function _processEvent(estream, esEvent) {
+  if (estream._ended) return;
+
+  var updateHistory;
+
+  if (!esEvent.estreamId) esEvent._setEstreamId(estream.id);
+  Object.freeze(esEvent);
+  _emitEvent(estream, esEvent);
+
+  if (estream._keepHistory) updateHistory = true;
+  if (!estream.consumers.length && estream._isBuffering) {
+    updateHistory = true;
+  } else {
+    estream._lastSentIndex++;
+  }
+  if (updateHistory) estream.history.push(esEvent);
+  if (esEvent.isEnd) {
+    if (estream._detach) {
+      estream.consumers = [];
+    }
+    estream._ended = true;
+  }
+}
+
+/**
+ * Notify consumers of an event.
+ *
+ * @private
+ * @param {Estream} estream
+ * @param {EsEvent} event - EsData | EsError | EsEnd
+ */
+function _emitEvent(estream, event) {
+  estream.consumers.forEach(function(obj) {
+    obj.fn(event, estream, obj.off);
+  });
+}
+
+/**
+ * @private
+ * @param {Estream} estream
+ * @param {EsEnd} esEnd
+ */
+function _parentEnd(estream, esEnd) {
+  var foundId = estream.sources.indexOf(esEnd.estreamId);
+  if (foundId !== -1) {
+    estream.sources.splice(foundId, 1);
+    estream._concatEnd.concat(esEnd);
+  }
+  if (estream.sources.length === 0) {
+    _processEvent(estream, estream._concatEnd);
+  }
+}
+
+/**
+ * Add a source/parent estream id to list of sources.
+ *
+ * @private
+ * @param {Estream} estream
+ * @param {String} estreamId
+ */
+function _addSource(estream, estreamId) {
+  if (estream.sources.indexOf(estreamId) === -1) {
+    estream.sources.push(estreamId);
+  }
+}
+
+/**
+ * @private
+ * @param {Estream} estream
+ * @param {Number} count
+ * @param {Number} interval
+ */
+function _replayEvent(estream, count, interval) {
+  var end = estream.history.length - 1;
+  var event = estream.history[count];
+  _emitEvent(estream, event);
+  ++count;
+  if (count < end || count === end) {
+    setTimeout(_replayEvent.bind(null, estream, count, interval), interval);
+  }
+}
+
+/**
+ * @private
+ * @param {Estream} estream
+ */
+function _emptyBuffer(estream) {
+  var max = estream.history.length;
+  estream.history
+  .slice(estream._lastSentIndex, estream.history.length)
+  .forEach(function(event) {
+    _emitEvent(estream, event);
+  });
+  estream._lastSentIndex = max;
+}
+
+/**
  * Base Estream event object.
  * This is not exposed directly. Please use:
  * EsData, EsEvent, or EsEnd - which inherit from this base object.
@@ -130,100 +254,6 @@ function Estream(opts) {
   this.consumers = [];
 }
 
-/**
- * @private
- * @param {EsEvent} event - EsData | EsError | EsEnd
- */
-Estream.prototype._processEvent = function(esEvent) {
-  if (this._ended) return;
-
-  var updateHistory;
-
-  if (!esEvent.estreamId) esEvent._setEstreamId(this.id);
-  Object.freeze(esEvent);
-  this._emitEvent(esEvent);
-
-  if (this._keepHistory) updateHistory = true;
-  if (!this.consumers.length && this._isBuffering) {
-    updateHistory = true;
-  } else {
-    this._lastSentIndex++;
-  }
-  if (updateHistory) this.history.push(esEvent);
-  if (esEvent.isEnd) {
-    if (this._detach) {
-      this.consumers = [];
-    }
-    this._ended = true;
-  }
-};
-
-/**
- * Notify consumers of an event.
- *
- * @private
- * @param {EsEvent} event - EsData | EsError | EsEnd
- */
-Estream.prototype._emitEvent = function(event) {
-  this.consumers.forEach(function(obj) {
-    obj.fn(event, this, obj.off);
-  }.bind(this));
-};
-
-/**
- * @private
- * @param {EsEnd} esEnd
- */
-Estream.prototype._parentEnd = function(esEnd) {
-  var foundId = this.sources.indexOf(esEnd.estreamId);
-  if (foundId !== -1) {
-    this.sources.splice(foundId, 1);
-    this._concatEnd.concat(esEnd);
-  }
-  if (this.sources.length === 0) {
-    this._processEvent(this._concatEnd);
-  }
-};
-
-/**
- * Add a source/parent estream id to list of sources.
- *
- * @private
- * @param {String} estreamId
- */
-Estream.prototype._addSource = function(estreamId) {
-  if (this.sources.indexOf(estreamId) === -1) {
-    this.sources.push(estreamId);
-  }
-};
-
-/**
- * @private
- * @param {Number} count
- * @param {Number} interval
- */
-Estream.prototype._replayEvent = function(count, interval) {
-  var end = this.history.length - 1;
-  var event = this.history[count];
-  this._emitEvent(event);
-  ++count;
-  if (count < end || count === end) {
-    setTimeout(this._replayEvent.bind(this, count, interval), interval);
-  }
-};
-
-/**
- * @private
- */
-Estream.prototype._emptyBuffer = function() {
-  var max = this.history.length;
-  this.history
-  .slice(this._lastSentIndex, this.history.length)
-  .forEach(function(event) {
-    this._emitEvent(event);
-  }.bind(this));
-  this._lastSentIndex = max;
-};
 
 /**
  * Pushes an event down the estream.
@@ -246,15 +276,15 @@ Estream.prototype.push = function(value) {
   }
   if (value) {
     if (value.isError) {
-      this._processEvent(value);
+      _processEvent(this, value);
     } else if (value.isEnd) {
-      this._processEvent(value);
+      _processEvent(this, value);
     } else {
       var wrappedValue = (value.isData) ? value : new EsData(value);
-      this._processEvent(wrappedValue);
+      _processEvent(this, wrappedValue);
     }
   } else {
-    this._processEvent(new EsData(value));
+    _processEvent(this, new EsData(value));
   }
   return this;
 };
@@ -274,7 +304,7 @@ Estream.prototype.push = function(value) {
  */
 Estream.prototype.error = function(error) {
   var wrappedError = (error instanceof EsError) ? error : new EsError(error);
-  this._processEvent(wrappedError);
+  _processEvent(this, wrappedError);
   return this;
 };
 
@@ -294,11 +324,11 @@ Estream.prototype.error = function(error) {
  */
 Estream.prototype.end = function(value) {
   if (arguments.length === 0) {
-    this._processEvent(new EsEnd());
+    _processEvent(this, new EsEnd());
     return this;
   }
   var wrappedEnd = (value instanceof EsEnd) ? value : new EsEnd(value);
-  this._processEvent(wrappedEnd);
+  _processEvent(this, wrappedEnd);
   return this;
 };
 
@@ -314,10 +344,10 @@ Estream.prototype.connect = function(childStream) {
     if (value.isData || value.isError) {
       childStream.push(value);
     } else {
-      childStream._parentEnd(value);
+      _parentEnd(childStream, value);
     }
   });
-  childStream._addSource(this.id);
+  _addSource(childStream, this.id);
 };
 
 /**
@@ -339,6 +369,11 @@ Estream.prototype.addSources = function(estreams) {
 
 /**
  * Adds a consumer to an estream.
+ * When an event gets pushed down this estream,
+ * the consumer will get as params:
+ * - the event (EsData | EsError | EsEnd)
+ * - a reference to the estream
+ * - the off/unsubscribe function
  *
  * __Signature__: `(a -> *) -> Estream a`
  *
@@ -348,8 +383,8 @@ Estream.prototype.addSources = function(estreams) {
  *
  * @example
  * var estream1 = es();
- * var estream1.on(function(x, estream1, unsubscribe) {
- *   console.log('got some data', x);
+ * var estream1.on(function(event, estream1, unsubscribe) {
+ *   console.log('got an event', event.value);
  * });
  */
 Estream.prototype.on = function(consumer) {
@@ -362,46 +397,15 @@ Estream.prototype.on = function(consumer) {
   var found = this.consumers.some(function(obj) {
     return obj.fn === consumer;
   });
-  var off;
+  var offFn;
   if (!found) {
-    off = this.off.bind(this, consumer);
-    this.consumers.push({ fn: consumer, off: off });
+    offFn = off.bind(null, this, consumer);
+    this.consumers.push({ fn: consumer, off: offFn });
     if (this._isBuffering && (this._lastSentIndex < this.history.length)) {
-      setTimeout(this._emptyBuffer.bind(this), 0);
+      setTimeout(_emptyBuffer.bind(null, this), 0);
     }
   }
-  return off;
-};
-
-/**
- * Removes a consumer from a estream.
- *
- * __Signature__: `(a -> *) -> Boolean`
- *
- * @name off
- * @param {Function} consumer - the consuming function
- * @return {Boolean} if the consumer was found and removed.
- *
- * @example
- * var estream1 = es();
- * var onEvent = function(x) { console.log(x); };
- * estream1.on(onEvent);
- * estream1.off(onEvent);
- */
-Estream.prototype.off = function(consumer) {
-  var foundIndex = -1;
-  this.consumers.some(function(obj, index) {
-    if (obj.fn === consumer) {
-      foundIndex = index;
-      return true;
-    }
-    return false;
-  });
-  if (foundIndex !== -1) {
-    this.consumers.splice(foundIndex, 1);
-    return true;
-  }
-  return false;
+  return offFn;
 };
 
 /**
@@ -479,7 +483,7 @@ Estream.prototype.endOnError = function() {
  * @param {Number} start - where to start in the history replay
  */
 Estream.prototype.replay = function(interval, start) {
-  setTimeout(this._replayEvent.bind(this, start || 0, interval), interval || 0);
+  setTimeout(_replayEvent.bind(null, this, start || 0, interval), interval || 0);
 };
 
 /**

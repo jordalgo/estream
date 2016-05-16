@@ -133,16 +133,6 @@ describe('Estream', function() {
     setTimeout(done, 10);
   });
 
-  it('has a method to remove a consumer', function() {
-    var s = ES();
-    var dataConsumer = function() {
-      assert.fail();
-    };
-    s.on(dataConsumer);
-    s.off(dataConsumer);
-    s.push(5);
-  });
-
   it('freezes event objects that are emitted', function(done) {
     var s = ES();
 
