@@ -420,26 +420,6 @@ describe('Estream', function() {
     });
   });
 
-  describe('debounce', function() {
-    it('delays all events', function(done) {
-      var s = ES();
-      var val = 0;
-
-      s.debounce(500).on(function(event) {
-        val = event.value;
-      });
-
-      s.push(1);
-      s.push(2);
-      assert.equal(val, 0);
-
-      setTimeout(function() {
-        assert.equal(val, 2);
-        done();
-      }, 1000);
-    });
-  });
-
   describe('reduce', function() {
     it('reduces the values of a single stream', function(done) {
       var s = ES();
@@ -480,27 +460,6 @@ describe('Estream', function() {
       s1.push(3);
       s1.end(4);
       s2.end(6);
-    });
-  });
-
-  describe('endOnError', function() {
-    it('ends on an error', function(done) {
-      var s1 = ES();
-      var called = 0;
-
-      s1
-      .endOnError()
-      .on(function(x) {
-        if (called === 0) {
-          assert.equal(x.value.message, 'error');
-          called++;
-        } else {
-          assert.deepEqual(x.value, []);
-          done();
-        }
-      });
-
-      s1.error(new Error('error'));
     });
   });
 });

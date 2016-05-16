@@ -102,6 +102,26 @@ function _addSource(estream, estreamId) {
 }
 
 /**
+ * Connects a child Estream to an Estream
+ *
+ * @private
+ * @name connect
+ * @param {Estream} parent
+ * @param {Estream} child
+ */
+function _connect(parent, child) {
+  parent.on(function(value) {
+    if (value.isData || value.isError) {
+      child.push(value);
+    } else {
+      _parentEnd(child, value);
+    }
+  });
+  _addSource(child, parent.id);
+}
+
+
+/**
  * @private
  * @param {Estream} estream
  * @param {Number} count
@@ -333,24 +353,6 @@ Estream.prototype.end = function(value) {
 };
 
 /**
- * Connects a child Estream to an Estream
- *
- * @private
- * @name connect
- * @param {Estream} childStream
- */
-Estream.prototype.connect = function(childStream) {
-  this.on(function(value) {
-    if (value.isData || value.isError) {
-      childStream.push(value);
-    } else {
-      _parentEnd(childStream, value);
-    }
-  });
-  _addSource(childStream, this.id);
-};
-
-/**
  * Creates a new estream with X amount of parent estreams.
  *
  * @name addSources
@@ -453,24 +455,6 @@ Estream.prototype.getHistory = function(start, end) {
  */
 Estream.prototype.clearHistory = function() {
   this.history = [];
-};
-
-/**
- * Returns a new Estream that ends on any error.
- * The new Estream will have _this_ as a parent/source Estream.
- *
- * @name endOnError
- * @return {Estream} that will end on error
- */
-Estream.prototype.endOnError = function() {
-  var s = createEstream();
-  this.on(function(event) {
-    s.push(event);
-    if (event.isError) {
-      s.end();
-    }
-  });
-  return s;
 };
 
 /**
@@ -649,31 +633,6 @@ Estream.prototype.reduce = function(fn, acc) {
 };
 
 /**
- * Creates an Estream that debounces all events from the source stream.
- *
- * __Signature__: `Number -> Estream`
- *
- * @name debounce
- * @param {Number} interval - the debounce timeout amount
- * @return {Estream}
- *
- * @example
- * var estream = ES();
- * var mEstream = estream.debounce(1000);
- */
-Estream.prototype.debounce = function(interval) {
-  var s = createEstream();
-  var dataTO;
-  this.on(function(event) {
-    clearTimeout(dataTO);
-    dataTO = setTimeout(function() {
-      s.push(event);
-    }, interval);
-  });
-  return s;
-};
-
-/**
  * Add methods to the base estream object.
  *
  * __Signature__: `[Objects] -> undefined`
@@ -728,7 +687,7 @@ function createEstream(sources, options) {
   var estream = new Estream(options);
   if (sources && Array.isArray(sources)) {
     sources.forEach(function(source) {
-      source.connect(estream);
+      _connect(source, estream);
     });
   }
   return estream;
