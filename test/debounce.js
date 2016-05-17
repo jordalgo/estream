@@ -6,8 +6,9 @@ describe('debounce', function() {
   it('delays all events', function(done) {
     var s = ES();
     var val = 0;
+    var debounce500 = debounce(500); // this tests the auto-curry
 
-    debounce(s, 500).on(function(event) {
+    debounce500(s).on(function(event) {
       val = event.value;
     });
 

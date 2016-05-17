@@ -7,15 +7,15 @@ var curryN = require('ramda/src/curryN');
  * __Signature__: `Number -> Estream`
  *
  * @name debounce
- * @param {Estream} estream
  * @param {Number} interval - the debounce timeout amount
+ * @param {Estream} estream
  * @return {Estream}
  *
  * @example
  * var estream = ES();
  * var mEstream = estream.debounce(1000);
  */
-function debounce(estream, interval) {
+function debounce(interval, estream) {
   var s = ES();
   var dataTO;
   estream.on(function(event) {
