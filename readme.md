@@ -1,6 +1,6 @@
 # Estream
 
-A javascript utility library for working with stream-like events in the browser.
+A javascript utility library for working with stream-like events in the browser!
 
 #### [Estream API](./api/estream.md)
 
