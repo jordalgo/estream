@@ -113,6 +113,25 @@ describe('Estream', function() {
     s.end('bye');
   });
 
+  it('has helper methods for consuming error and end messages', function(done) {
+    var s = ES();
+    var errorCalled;
+
+    s.onError(function(x) {
+      assert.equal(x.value, 'error');
+      errorCalled = true;
+    });
+    s.onEnd(function(x) {
+      assert.deepEqual(x.value, ['bye']);
+      assert.ok(errorCalled);
+      done();
+    });
+
+    s.push(5);
+    s.error('error');
+    s.end('bye');
+  });
+
   it('passes unsubscribe functions to consumers when events are emitted', function(done) {
     var s = ES();
     var called;

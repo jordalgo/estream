@@ -93,6 +93,17 @@ estream1.end();
 
 Returns **Estream** 
 
+# endOnError
+
+Returns a new Estream that ends on any error.
+The new Estream will have _this_ as a parent/source Estream.
+
+**Parameters**
+
+-   `estream` **Estream** 
+
+Returns **Estream** that will end on error
+
 # error
 
 Pushes an error down the estream wrapped in an EsError.
@@ -290,7 +301,7 @@ Returns **Estream**
 
 # onError
 
-A helper function for getting only error events from Estreams.
+A helper function for getting only end events from Estreams.
 
 **Parameters**
 
@@ -300,7 +311,7 @@ Returns **Estream**
 
 # onError
 
-A helper function for getting only end events from Estreams.
+A helper function for getting only error events from Estreams.
 
 **Parameters**
 

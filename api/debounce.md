@@ -73,6 +73,26 @@ var estream2 = ES([estream1]);
 
 Returns **Estream** 
 
+# debounce
+
+Creates an Estream that debounces all events from the source stream.
+
+**Signature**: `Number -> Estream`
+
+**Parameters**
+
+-   `interval` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** the debounce timeout amount
+-   `estream` **Estream** 
+
+**Examples**
+
+```javascript
+var estream = ES();
+var mEstream = estream.debounce(1000);
+```
+
+Returns **Estream** 
+
 # end
 
 Pushes an end event down the estream.

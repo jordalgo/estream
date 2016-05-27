@@ -411,15 +411,41 @@ Estream.prototype.on = function(consumer) {
 };
 
 /**
- * A helper function for getting only data event values from Estreams.
+ * A helper function for getting only data events from Estreams.
  *
- * @name forEach
+ * @name onData
  * @param {Function} consumer - the consuming function
  * @return {Estream}
  */
-Estream.prototype.forEach = function(consumer) {
-  return this.on(function(event) {
-    consumer(event.value);
+Estream.prototype.onData = function(consumer) {
+  return this.on(function(event, estream, offFn) {
+    if (event.isData) consumer(event, estream, offFn);
+  });
+};
+
+/**
+ * A helper function for getting only error events from Estreams.
+ *
+ * @name onError
+ * @param {Function} consumer - the consuming function
+ * @return {Estream}
+ */
+Estream.prototype.onError = function(consumer) {
+  return this.on(function(event, estream, offFn) {
+    if (event.isError) consumer(event, estream, offFn);
+  });
+};
+
+/**
+ * A helper function for getting only end events from Estreams.
+ *
+ * @name onError
+ * @param {Function} consumer - the consuming function
+ * @return {Estream}
+ */
+Estream.prototype.onEnd = function(consumer) {
+  return this.on(function(event, estream, offFn) {
+    if (event.isEnd) consumer(event, estream, offFn);
   });
 };
 
