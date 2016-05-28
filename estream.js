@@ -1,4 +1,3 @@
-var uuid = require('node-uuid');
 var merge = require('ramda/src/merge');
 
 var defaultOptions = {
@@ -34,15 +33,15 @@ function off(estream, consumer) {
  * @private
  * @param {Estream} estream
  * @param {EsEvent} event - EsData | EsError | EsEnd
+ * @param {Estream} sourceEstream - the parent stream emitting event
  */
-function _processEvent(estream, esEvent) {
+function _processEvent(estream, esEvent, sourceEstream) {
   if (estream._ended) return;
 
   var updateHistory;
 
-  if (!esEvent.estreamId) esEvent._setEstreamId(estream.id);
   Object.freeze(esEvent);
-  _emitEvent(estream, esEvent);
+  _emitEvent(estream, esEvent, sourceEstream);
 
   if (estream._keepHistory) updateHistory = true;
   if (!estream.consumers.length && estream._isBuffering) {
@@ -65,10 +64,11 @@ function _processEvent(estream, esEvent) {
  * @private
  * @param {Estream} estream
  * @param {EsEvent} event - EsData | EsError | EsEnd
+ * @param {Estream} sourceEstream
  */
-function _emitEvent(estream, event) {
+function _emitEvent(estream, event, sourceEstream) {
   estream.consumers.forEach(function(obj) {
-    obj.fn(event, estream, obj.off);
+    obj.fn(event, sourceEstream || estream, obj.off);
   });
 }
 
@@ -76,11 +76,12 @@ function _emitEvent(estream, event) {
  * @private
  * @param {Estream} estream
  * @param {EsEnd} esEnd
+ * @param {Estream} endingStream
  */
-function _parentEnd(estream, esEnd) {
-  var foundId = estream.sources.indexOf(esEnd.estreamId);
-  if (foundId !== -1) {
-    estream.sources.splice(foundId, 1);
+function _parentEnd(estream, esEnd, endingStream) {
+  var foundIndex = estream.sources.indexOf(endingStream);
+  if (foundIndex !== -1) {
+    estream.sources.splice(foundIndex, 1);
     estream._concatEnd.concat(esEnd);
   }
   if (estream.sources.length === 0) {
@@ -89,15 +90,15 @@ function _parentEnd(estream, esEnd) {
 }
 
 /**
- * Add a source/parent estream id to list of sources.
+ * Add a source/parent estream to list of sources.
  *
  * @private
  * @param {Estream} estream
- * @param {String} estreamId
+ * @param {Estream} sourceEstream
  */
-function _addSource(estream, estreamId) {
-  if (estream.sources.indexOf(estreamId) === -1) {
-    estream.sources.push(estreamId);
+function _addSource(estream, sourceEstream) {
+  if (estream.sources.indexOf(sourceEstream) === -1) {
+    estream.sources.push(sourceEstream);
   }
 }
 
@@ -110,14 +111,14 @@ function _addSource(estream, estreamId) {
  * @param {Estream} child
  */
 function _connect(parent, child) {
-  parent.on(function(value) {
-    if (value.isData || value.isError) {
-      child.push(value);
+  parent.on(function(event, source) {
+    if (event.isData || event.isError) {
+      _processEvent(child, event, source || parent);
     } else {
-      _parentEnd(child, value);
+      _parentEnd(child, event, parent);
     }
   });
-  _addSource(child, parent.id);
+  _addSource(child, parent);
 }
 
 
@@ -158,20 +159,14 @@ function _emptyBuffer(estream) {
  *
  * @constructor
  * @param {*} value
- * @param {String} id - the EstreamId that is the original source of the event
  */
-function EsEvent(value, id) {
+function EsEvent(value) {
   this.value = value;
-  this.estreamId = id;
 }
 
 EsEvent.prototype.isData = false;
 EsEvent.prototype.isError = false;
 EsEvent.prototype.isEnd = false;
-
-EsEvent.prototype._setEstreamId = function(id) {
-  this.estreamId = id;
-};
 
 /**
  * Estream Data Event object.
@@ -267,7 +262,6 @@ function Estream(opts) {
   this._detach = options.detach;
 
   this._concatEnd = new EsEnd();
-  this.id = uuid.v4();
   this._lastSentIndex = 0;
   this.history = [];
   this.sources = [];

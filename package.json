@@ -4,7 +4,6 @@
   "description": "A javascript library with a simplified take on event streams.",
   "main": "estream.js",
   "dependencies": {
-    "node-uuid": "^1.4.7",
     "ramda": "^0.21.0"
   },
   "devDependencies": {

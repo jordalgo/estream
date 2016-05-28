@@ -45,28 +45,38 @@ describe('Estream', function() {
     var s1 = ES();
     var s2 = ES();
     var s3 = ES([s1, s2]);
+    var s4 = ES([s3]);
     var called = 0;
 
     s3
-    .on(function(x) {
+    .on(function(x, sourceEstream) {
       if (called === 0) {
         assert.equal(x.value, 1);
-        assert.equal(x.estreamId, s1.id);
+        assert.equal(sourceEstream, s1);
       } else if (called === 1) {
         assert.equal(x.value, 10);
-        assert.equal(x.estreamId, s2.id);
+        assert.equal(sourceEstream, s2);
       } else if (called === 2) {
         assert.equal(x.value, 20);
-        assert.equal(x.estreamId, s3.id);
+        assert.equal(sourceEstream, s3);
       } else if (called === 3) {
         assert.equal(x.value, 'error');
-        assert.equal(x.estreamId, s2.id);
+        assert.equal(sourceEstream, s2);
       } else if (called === 4) {
         assert.deepEqual(x.value, ['hello', 'bye']);
         assert.equal(called, 4);
+        assert.equal(sourceEstream, s3);
         done();
       }
       called++;
+    });
+
+    s4.on(function(x, sourceEstream, off) {
+      if (called === 0) {
+        assert.equal(x.value, 1);
+        assert.equal(sourceEstream, s1);
+      }
+      off();
     });
 
     s1.push(1);
