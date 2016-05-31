@@ -1,9 +1,5 @@
-var merge = require('ramda/src/merge');
-
 var defaultOptions = {
-  history: false,
-  buffer: true,
-  detach: true
+  buffer: true
 };
 
 /**
@@ -38,22 +34,14 @@ function off(estream, consumer) {
 function _processEvent(estream, esEvent, sourceEstream) {
   if (estream._ended) return;
 
-  var updateHistory;
-
   Object.freeze(esEvent);
   _emitEvent(estream, esEvent, sourceEstream);
 
-  if (estream._keepHistory) updateHistory = true;
   if (!estream.consumers.length && estream._isBuffering) {
-    updateHistory = true;
-  } else {
-    estream._lastSentIndex++;
+    estream.buffer.push(esEvent);
   }
-  if (updateHistory) estream.history.push(esEvent);
   if (esEvent.isEnd) {
-    if (estream._detach) {
-      estream.consumers = [];
-    }
+    estream.consumers = [];
     estream._ended = true;
   }
 }
@@ -121,35 +109,16 @@ function _connect(parent, child) {
   _addSource(child, parent);
 }
 
-
-/**
- * @private
- * @param {Estream} estream
- * @param {Number} count
- * @param {Number} interval
- */
-function _replayEvent(estream, count, interval) {
-  var end = estream.history.length - 1;
-  var event = estream.history[count];
-  _emitEvent(estream, event);
-  ++count;
-  if (count < end || count === end) {
-    setTimeout(_replayEvent.bind(null, estream, count, interval), interval);
-  }
-}
-
 /**
  * @private
  * @param {Estream} estream
  */
 function _emptyBuffer(estream) {
-  var max = estream.history.length;
-  estream.history
-  .slice(estream._lastSentIndex, estream.history.length)
+  estream.buffer
   .forEach(function(event) {
     _emitEvent(estream, event);
   });
-  estream._lastSentIndex = max;
+  estream.buffer = [];
 }
 
 /**
@@ -256,14 +225,10 @@ EsEnd.prototype.concat = function(esEnd) {
  * @param {Object} opts - stream options
  */
 function Estream(opts) {
-  var options = merge(defaultOptions, opts || {});
-  this._isBuffering = options.buffer;
-  this._keepHistory = options.history;
-  this._detach = options.detach;
-
+  this._isBuffering = (opts && opts.hasOwnProperty('buffer')) ? opts.buffer : defaultOptions.buffer;
   this._concatEnd = new EsEnd();
   this._lastSentIndex = 0;
-  this.history = [];
+  this.buffer = [];
   this.sources = [];
   this.consumers = [];
 }
@@ -387,8 +352,8 @@ Estream.prototype.on = function(consumer) {
   if (typeof consumer !== 'function') {
     throw new Error('Consumer needs to be a function.');
   }
-  if (!this.history.length && this._ended) {
-    console.warn('The estream has ended and the history is empty.');
+  if (!this.buffer.length && this._ended) {
+    console.warn('The estream has ended and the buffer is empty.');
   }
   var found = this.consumers.some(function(obj) {
     return obj.fn === consumer;
@@ -397,7 +362,7 @@ Estream.prototype.on = function(consumer) {
   if (!found) {
     offFn = off.bind(null, this, consumer);
     this.consumers.push({ fn: consumer, off: offFn });
-    if (this._isBuffering && (this._lastSentIndex < this.history.length)) {
+    if (this._isBuffering && this.buffer.length) {
       setTimeout(_emptyBuffer.bind(null, this), 0);
     }
   }
@@ -444,50 +409,26 @@ Estream.prototype.onEnd = function(consumer) {
 };
 
 /**
- * Sets the _keepHistory property. Set to true by default.
- * If this is set to true then an Estream keeps a record of all it's pushed events.
+ * Get events out of the buffer. Useful if the stream has ended.
  *
- * @name keepHistory
- * @param {Boolean} keep
- * @return {Estream}
+ * @name getBuffer
+ * @param {Number} end - when to end when reading from the buffer
+ * @return {Array} - an array of buffered events
  */
-Estream.prototype.keepHistory = function(keep) {
-  this._keepHistory = keep === true;
-  return this;
+Estream.prototype.getBuffer = function(end) {
+  var bufferLen = this.buffer.length;
+  var bufferSlice = this.buffer.slice(0, end || bufferLen);
+  this.buffer = this.buffer.slice(end, bufferLen);
+  return bufferSlice;
 };
 
 /**
- * Get events out of the history
+ * Remove all stored events from the buffer.
  *
- * @name getHistory
- * @param {Number} start - when to start in reading from the history
- * @param {Number} end - when to end when reading from the history
- * @return {Array} - an array of history events
+ * @name clearBuffer
  */
-Estream.prototype.getHistory = function(start, end) {
-  return this.history.slice(start || 0, end || this.history.length);
-};
-
-/**
- * Remove all stored events from the history.
- *
- * @name clearHistory
- */
-Estream.prototype.clearHistory = function() {
-  this.history = [];
-};
-
-/**
- * Replay a streams events.
- * This will switch a stream back on and reflow all the events
- * in the history at that passed in interval.
- *
- * @name replay
- * @param {Number} interval - the time between each replayed event
- * @param {Number} start - where to start in the history replay
- */
-Estream.prototype.replay = function(interval, start) {
-  setTimeout(_replayEvent.bind(null, this, start || 0, interval), interval || 0);
+Estream.prototype.clearBuffer = function() {
+  this.buffer = [];
 };
 
 /**
@@ -677,21 +618,6 @@ function addMethods(addedMethods) {
 }
 
 /**
- * Override the default options for all created Estreams
- *
- * @param {Object} options
- */
-function setDefaultOptions(options) {
-  if (options.debug) {
-    defaultOptions.history = true;
-    defaultOptions.buffer = true;
-    defaultOptions.detach = false;
-  } else {
-    defaultOptions = merge(defaultOptions, options);
-  }
-}
-
-/**
  * Estream factory function.
  * The only way to create a new blank Estream.
  *
@@ -714,7 +640,6 @@ function createEstream(sources, options) {
 }
 
 createEstream.addMethods = addMethods;
-createEstream.setDefaultOptions = setDefaultOptions;
 createEstream.Error = EsError;
 createEstream.End = EsEnd;
 createEstream.Data = EsData;

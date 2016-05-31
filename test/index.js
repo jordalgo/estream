@@ -174,85 +174,43 @@ describe('Estream', function() {
     s.push(5);
   });
 
-  it('returns history with `getHistory`', function() {
-    var s = ES(null, { history: true });
-    var s2 = ES([s], { history: true });
+  it('returns the buffer with `getBuffer`', function() {
+    var s = ES();
+    var s2 = ES([s]);
     s2.push(3);
     s.push(5);
     s2.push(4);
 
-    var history = s2.getHistory(0, 2);
-    assert.equal(history[0].value, 3);
-    assert.equal(history[0].estreamId, s2.id);
-    assert.equal(history[0].isData, true);
-    assert.equal(history[1].value, 5);
-    assert.equal(history[1].estreamId, s.id);
+    var buffer = s2.getBuffer(2);
+    assert.equal(buffer[0].value, 3);
+    assert.equal(buffer[0].isData, true);
+    assert.equal(buffer[1].value, 5);
 
-    assert.equal(s.getHistory(0).length, 1);
-    assert.equal(s2.getHistory(0).length, 3);
+    assert.equal(s.getBuffer(0).length, 0);
+    assert.equal(s2.getBuffer(0).length, 1);
 
     s.error('boom');
 
-    history = s2.getHistory(0);
-    assert.equal(history[0].value, 3);
-    assert.equal(history[0].estreamId, s2.id);
-    assert.equal(history[0].isData, true);
-    assert.equal(history[1].value, 5);
-    assert.equal(history[1].estreamId, s.id);
-    assert.equal(history[2].value, 4);
-    assert.equal(history[2].estreamId, s2.id);
-    assert.equal(history[3].value, 'boom');
-    assert.equal(history[3].isError, true);
-    assert.equal(history[3].estreamId, s.id);
+    buffer = s2.getBuffer(0);
+    assert.equal(buffer[0].value, 4);
+    assert.equal(buffer[1].value, 'boom');
+    assert.equal(buffer[1].isError, true);
   });
 
-  it('clears the history with `clearHistory`', function() {
-    var s = ES(null, { history: true });
-    var s2 = ES([s], { history: true });
+  it('clears the buffer with `clearbuffer`', function() {
+    var s = ES();
+    var s2 = ES([s]);
     s2.push(3);
     s.push(5);
     s2.push(4);
 
-    var history = s2.getHistory(0, 2);
-    assert.equal(history[0].value, 3);
-    assert.equal(history[0].estreamId, s2.id);
-    assert.equal(history[0].isData, true);
-    assert.equal(history[1].value, 5);
-    assert.equal(history[1].estreamId, s.id);
+    var buffer = s2.getBuffer(2);
+    assert.equal(buffer[0].value, 3);
+    assert.equal(buffer[0].isData, true);
+    assert.equal(buffer[1].value, 5);
 
-    s2.clearHistory();
-    history = s2.getHistory(0);
-    assert.deepEqual(history, []);
-  });
-
-  describe('replay', function() {
-    it('can replay the event history', function(done) {
-      var s = ES(null, { history: true, buffer: false });
-      var called = 0;
-
-      s.push(3);
-      s.push(4);
-      s.push(5);
-      s.push(6);
-      s.error(new Error('boom'));
-      s.end();
-
-      s.on(function(x) {
-        if (called < 4) {
-          assert.ok(x.isData);
-          assert.equal(x.value, called + 3);
-        } else if (called === 4) {
-          assert.ok(x.isError);
-          assert.equal(x.value.message, 'boom');
-        } else {
-          assert.ok(x.isEnd);
-          done();
-        }
-        called++;
-      });
-
-      s.replay(10);
-    });
+    s2.clearBuffer();
+    assert.deepEqual(s2.getBuffer(0), []);
   });
 
   it('does not buffers messages with flowing on (default)', function(done) {
