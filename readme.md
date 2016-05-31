@@ -17,6 +17,12 @@ estream.on(function(x) {
   x.value // 'my val'
 });
 ```
+Or, the easier way:
+```javascript
+estream.onData(function(x) {
+  x // 'my val'
+});
+```
 
 #### [EsError](./api/estream.md#eserror)
 These are objects that are used to represent an error, either from the source itself or internally in the stream. `estream.push(new ES.error('boom'))` or, the easier way, `estream.error('boom')`, which wraps the value in an EsError object. To listen to these events:
@@ -26,19 +32,31 @@ estream.on(function(x) {
   x.value // 'boom'
 });
 ```
+Or, the easier way:
+```javascript
+estream.onError(function(x) {
+  x // 'boom'
+});
+```
 
 #### [EsEnd](./api/estream.md#esend)
-These are objects that are used to represent an end to an estream. `estream.push(new ES.end('end'))` or, the easier way, `estream.end('end')`, which wraps the value in an EsEnd object. Once an end is emitted by a stream, no more events will be emitted and all references to the consuming functions will be removed. To listen to these events:
+These are objects that are used to represent an end to an estream. `estream.push(new ES.end('end'))` or, the easier way, `estream.end('end')`, which wraps the value in an EsEnd object. All values are wrapped in an array as estreams can have multiple source estreams that end. Once an end is emitted by a stream, no more events will be emitted and all references to the consuming functions will be removed. To listen to these events:
 ```javascript
 estream.on(function(x) {
   x.isEnd // true
-  x.value // 'end'
+  x.value // '[end]'
+});
+```
+Or, the easier way:
+```javascript
+estream.onEnd(function(x) {
+  x // '[end]'
 });
 ```
 
 ## Combining Estreams
 
-Combining estreams is very easy. All you have to do is pass the streams you want to merge as arguments when you create a new stream e.g. `var estream3 = ES([estream1, estream2])`: this wil flow data and errors from both estream1 and estream2 into estream3. However, the combined stream will not end until all of it's parent or source estreams have ended e.g. `estream1.end(); estream2.end` will cause `estream3` to end and emit an end event.
+Combining estreams is very easy. All you have to do is pass the streams you want to merge in an array when you create a new stream e.g. `var estream3 = ES([estream1, estream2])`: this wil flow data and errors from both estream1 and estream2 into estream3. However, the combined stream will not end until all of it's parent or source estreams have ended e.g. `estream1.end(); estream2.end` will cause `estream3` to end and emit an end event.
 
 ## Examples:
 
@@ -82,19 +100,16 @@ off();
 ```
 
 ## Estream Options
-
-* **history** (default: false): When true the Estream keeps a record of all events that pass through it, which you can get by calling `getHistory`.
-* **buffer** (default: true): If the buffer is on and events are pushed into the Estream, then once a consumer is added, all the previous events will flow into the consumer as individual actions.
-* **detach** (default: true): This removes the references to all of an estream's consumers so that they can be garbage collected.
+* **buffer** (default: true): If the buffer is on and events are pushed into the Estream they will get stored in the buffer (an array), then once a consumer is added, all the previous events will flow into the consumer as individual actions in the same call stack. You can also pull individual events from the buffer with `getBuffer`.
 
 Example:
 ```javascript
-var estream = ES(null, { history: true, detach: false });
+var estream = ES(null, { buffer: false });
 ```
 
 ## Inspiration
 
-This library was inspired by my own need to create a predictable way to work with events that you want to transform, merge and observe. I've used a lot of stream and observable libraries but found that there were certain aspects of them that I found confusing or problematic. Estream tries to create a very simple abstraction for dealing with async events in the client.
+This library was inspired by my own need to create a predictable way to work with events that you want to transform, combine and observe. I've used a lot of stream and observable libraries but found that there were certain aspects of them that I found confusing or problematic. Estream tries to create a very simple abstraction for dealing with async events in the client.
 
 ## Credits
 

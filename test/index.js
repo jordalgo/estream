@@ -128,11 +128,11 @@ describe('Estream', function() {
     var errorCalled;
 
     s.onError(function(x) {
-      assert.equal(x.value, 'error');
+      assert.equal(x, 'error');
       errorCalled = true;
     });
     s.onEnd(function(x) {
-      assert.deepEqual(x.value, ['bye']);
+      assert.deepEqual(x, ['bye']);
       assert.ok(errorCalled);
       done();
     });
