@@ -1,22 +1,20 @@
-var ES = require('../estream');
+var estream = require('../estream');
 
 /**
  * Returns a new Estream that ends on any error.
  * The new Estream will have _this_ as a parent/source Estream.
  *
  * @name endOnError
- * @param {Estream} estream
+ * @param {Estream} es
  * @return {Estream} that will end on error
  */
-function endOnError(estream) {
-  var s = ES();
-  estream.on(function(event) {
-    s.push(event);
-    if (event.isError) {
-      s.end();
-    }
+function endOnError(es) {
+  return estream(function(push, error, end) {
+    es.onError(function(err) {
+      error(err);
+      end();
+    });
   });
-  return s;
 }
 
 module.exports = endOnError;

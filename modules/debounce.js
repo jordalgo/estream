@@ -1,4 +1,4 @@
-var ES = require('../estream');
+var estream = require('../estream');
 var curryN = require('ramda/src/curryN');
 
 /**
@@ -8,23 +8,22 @@ var curryN = require('ramda/src/curryN');
  *
  * @name debounce
  * @param {Number} interval - the debounce timeout amount
- * @param {Estream} estream
+ * @param {Estream} es
  * @return {Estream}
  *
  * @example
- * var estream = ES();
- * var mEstream = estream.debounce(1000);
+ * var stream2 = stream1.debounce(1000);
  */
-function debounce(interval, estream) {
-  var s = ES();
+function debounce(interval, es) {
   var dataTO;
-  estream.on(function(event) {
-    clearTimeout(dataTO);
-    dataTO = setTimeout(function() {
-      s.push(event);
-    }, interval);
+  return estream(function(push) {
+    es.on(function(event) {
+      clearTimeout(dataTO);
+      dataTO = setTimeout(function() {
+        push(event);
+      }, interval);
+    });
   });
-  return s;
 }
 
 module.exports = curryN(2, debounce);

@@ -4,19 +4,19 @@ var endOnError = require('../modules/end-on-error');
 
 describe('endOnError', function() {
   it('creates an estream that ends on an error', function(done) {
-    var s1 = ES();
+    var s1 = ES(function(push, error) {
+      setTimeout(error.bind(null, 'error'));
+    });
     var called = 0;
 
     endOnError(s1).on(function(x) {
       if (called === 0) {
-        assert.equal(x.value.message, 'error');
+        assert.equal(x.value, 'error');
         called++;
       } else {
         assert.deepEqual(x.value, []);
         done();
       }
     });
-
-    s1.error(new Error('error'));
   });
 });

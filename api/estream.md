@@ -36,9 +36,26 @@ var estream4 = estream1.addSources([estream2, estream3]);
 
 Returns **Estream** 
 
-# clearHistory
+# clearBuffer
 
-Remove all stored events from the history.
+Remove all stored events from the buffer.
+
+# combine
+
+Combine estreams into a new estream.
+
+**Parameters**
+
+-   `sources` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** an array of Estreams
+-   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** set of estream options
+
+**Examples**
+
+```javascript
+var estream3 = ES.combine([estream1, estream2]);
+```
+
+Returns **Estream** 
 
 # EsEnd
 
@@ -64,11 +81,15 @@ estream1.end('my end val'); // which wraps this value in an EsEnd object
 Estream factory function.
 The only way to create a new blank Estream.
 
+**Parameters**
+
+-   `fn` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** the source function
+-   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** set of estream options
+
 **Examples**
 
 ```javascript
-var estream1 = ES();
-var estream2 = ES([estream1]);
+var estream1 = ES(function(push, error, end) {}, { buffer: false });
 ```
 
 Returns **Estream** 
@@ -76,41 +97,22 @@ Returns **Estream**
 # end
 
 Pushes an end event down the estream.
-After a stream ends no more errors or data can be pushed down stream.
-
-**Signature**: `a -> Estream`
+The estream param is bound automatically when creating a new estream.
 
 **Parameters**
 
--   `value` **Any** the error
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.end();
-```
-
-Returns **Estream** 
+-   `estream` **Estream** 
+-   `value` **Any** the value
 
 # error
 
-Pushes an error down the estream wrapped in an EsError.
-
-**Signature**: `* -> Estream`
+Pushes an error event down the estream.
+The estream param is bound automatically when creating a new estream.
 
 **Parameters**
 
--   `value` **Any** the error
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.error(new Error('boom'));
-```
-
-Returns **Estream** 
+-   `estream` **Estream** 
+-   `value` **Any** the value
 
 # EsData
 
@@ -149,7 +151,6 @@ EsData, EsEvent, or EsEnd - which inherit from this base object.
 **Parameters**
 
 -   `value` **Any** 
--   `id` **[String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** the EstreamId that is the original source of the event
 
 # Estream
 
@@ -207,27 +208,15 @@ estream1.filterEvent(function(e) {
 
 Returns **Estream** 
 
-# getHistory
+# getBuffer
 
-Get events out of the history
-
-**Parameters**
-
--   `start` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** when to start in reading from the history
--   `end` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** when to end when reading from the history
-
-Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** an array of history events
-
-# keepHistory
-
-Sets the \_keepHistory property. Set to true by default.
-If this is set to true then an Estream keeps a record of all it's pushed events.
+Get events out of the buffer. Useful if the stream has ended.
 
 **Parameters**
 
--   `keep` **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean)** 
+-   `end` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** when to end when reading from the buffer
 
-Returns **Estream** 
+Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** an array of buffered events
 
 # map
 
@@ -280,7 +269,7 @@ Returns **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Ref
 
 # onData
 
-A helper function for getting only data events from Estreams.
+A helper function for getting only data event values from Estreams.
 
 **Parameters**
 
@@ -290,7 +279,7 @@ Returns **Estream**
 
 # onError
 
-A helper function for getting only error events from Estreams.
+A helper function for getting only error event values from Estreams.
 
 **Parameters**
 
@@ -300,7 +289,7 @@ Returns **Estream**
 
 # onError
 
-A helper function for getting only end events from Estreams.
+A helper function for getting only end event values from Estreams.
 
 **Parameters**
 
@@ -310,24 +299,13 @@ Returns **Estream**
 
 # push
 
-Pushes an event down the estream.
-If the value isn't an EsData, EsError, or EsEnd object,
-the value is wrapped in an EsData object.
-
-**Signature**: `* -> Estream`
+Pushes a data event down the estream.
+The estream param is bound automatically when creating a new estream.
 
 **Parameters**
 
+-   `estream` **Estream** 
 -   `value` **Any** the value
-
-**Examples**
-
-```javascript
-var estream = ES();
-estream1.push(5);
-```
-
-Returns **Estream** 
 
 # reduce
 
@@ -352,17 +330,6 @@ estream1.reduce(sum, 0).on(function(event) {
 
 Returns **Estream** 
 
-# replay
-
-Replay a streams events.
-This will switch a stream back on and reflow all the events
-in the history at that passed in interval.
-
-**Parameters**
-
--   `interval` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** the time between each replayed event
--   `start` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** where to start in the history replay
-
 # scan
 
 Returns a Estream that scans the values from data events.
@@ -384,11 +351,3 @@ var sEstream = estream1.scan(sum, 0);
 ```
 
 Returns **Estream** 
-
-# setDefaultOptions
-
-Override the default options for all created Estreams
-
-**Parameters**
-
--   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** 

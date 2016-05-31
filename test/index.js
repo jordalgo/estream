@@ -2,6 +2,7 @@ var assert = require('assert');
 var ES = require('../estream');
 var R = require('ramda');
 
+var noop = function() {};
 var add1 = function(x) { return x + 1; };
 var sum = function(acc, value) { return acc + value; };
 var isGt10 = function(a) { return a > 10; };
@@ -12,40 +13,50 @@ describe('Estream', function() {
   });
 
   it('has a method to push data into it and a consume that data', function(done) {
-    var s = ES();
+    var s = ES(function(push) {
+      push(5);
+    });
     s.on(function(data) {
       assert.equal(data.isData, true);
       assert.equal(data.value, 5);
       done();
     });
-    s.push(5);
   });
 
   it('routes errors', function(done) {
-    var s = ES();
+    var s = ES(function(push, error) {
+      error('error');
+    });
     s.on(function(err) {
       assert.equal(err.isError, true);
       assert.equal(err.value, 'error');
       done();
     });
-    s.push(new ES.Error('error'));
   });
 
   it('routes ends', function(done) {
-    var s = ES();
+    var s = ES(function(push, error, end) {
+      end('byebye');
+    });
     s.on(function(end) {
       assert.equal(end.isEnd, true);
       assert.deepEqual(end.value, ['byebye']);
       done();
     });
-    s.push(new ES.End('byebye'));
   });
 
-  it('can have multiple source estreams', function(done) {
-    var s1 = ES();
-    var s2 = ES();
-    var s3 = ES([s1, s2]);
-    var s4 = ES([s3]);
+  it('can combine multiple source estreams', function(done) {
+    var s1 = ES(function(push, error, end) {
+      setTimeout(push.bind(null, 1));
+      setTimeout(end.bind(null, 'hello'), 150);
+    });
+    var s2 = ES(function(push, error, end) {
+      setTimeout(push.bind(null, 10));
+      setTimeout(error.bind(null, 'error'), 50);
+      setTimeout(end.bind(null, 'bye'), 300);
+    });
+    var s3 = ES.combine([s1, s2]);
+    var s4 = ES.combine([s3]);
     var called = 0;
 
     s3
@@ -57,14 +68,10 @@ describe('Estream', function() {
         assert.equal(x.value, 10);
         assert.equal(sourceEstream, s2);
       } else if (called === 2) {
-        assert.equal(x.value, 20);
-        assert.equal(sourceEstream, s3);
-      } else if (called === 3) {
         assert.equal(x.value, 'error');
         assert.equal(sourceEstream, s2);
-      } else if (called === 4) {
+      } else if (called === 3) {
         assert.deepEqual(x.value, ['hello', 'bye']);
-        assert.equal(called, 4);
         assert.equal(sourceEstream, s3);
         done();
       }
@@ -78,53 +85,14 @@ describe('Estream', function() {
       }
       off();
     });
-
-    s1.push(1);
-    s2.push(10);
-    s3.push(20);
-    s2.push(new ES.Error('error'));
-    s1.push(new ES.End('hello'));
-    s2.push(new ES.End('bye'));
-  });
-
-  it('ends if parent Estreams have not ended and end called explicitly', function() {
-    var s0 = ES();
-    var s1 = ES();
-    var s2 = ES();
-    var s3 = ES([s0, s1, s2]);
-    var s3Complete = false;
-
-    s3.on(function() {
-      s3Complete = true;
-    });
-
-    s1.end();
-    s2.end();
-    assert.equal(s3Complete, false);
-    s3.end();
-    assert.equal(s3Complete, true);
-  });
-
-  it('has helper methods for passing error and end messages', function(done) {
-    var s = ES();
-    var called = 0;
-
-    s.on(function(x) {
-      if (called === 0) {
-        assert.equal(x.value, 'error');
-      } else if (called === 1) {
-        assert.deepEqual(x.value, ['bye']);
-        done();
-      }
-      called++;
-    });
-
-    s.error('error');
-    s.end('bye');
   });
 
   it('has helper methods for consuming error and end messages', function(done) {
-    var s = ES();
+    var s = ES(function(push, error, end) {
+      push(5);
+      error('error');
+      end('bye');
+    });
     var errorCalled;
 
     s.onError(function(x) {
@@ -136,15 +104,17 @@ describe('Estream', function() {
       assert.ok(errorCalled);
       done();
     });
-
-    s.push(5);
-    s.error('error');
-    s.end('bye');
   });
 
   it('passes unsubscribe functions to consumers when events are emitted', function(done) {
-    var s = ES();
     var called;
+    var s = ES(function(push, error) {
+      setTimeout(function() {
+        push(1);
+        assert.ok(called);
+        error(new Error('boom'));
+      });
+    });
 
     s.on(function(x, estream, unsubscribe) {
       if (!called) {
@@ -156,85 +126,74 @@ describe('Estream', function() {
       }
     });
 
-    s.push(1);
-    s.error(new Error('boom'));
-    assert.ok(called);
     setTimeout(done, 10);
   });
 
   it('freezes event objects that are emitted', function(done) {
-    var s = ES();
+    var s = ES(function(push) {
+      push(5);
+    });
 
     s.on(function(event) {
       event.value = 'bad';
       assert.equal(event.value, 5);
       done();
     });
-
-    s.push(5);
   });
 
-  it('returns the buffer with `getBuffer`', function() {
-    var s = ES();
-    var s2 = ES([s]);
-    s2.push(3);
-    s.push(5);
-    s2.push(4);
+  it('returns the buffer with `getBuffer`', function(done) {
+    var s = ES(function(push, error) {
+      push(3);
+      push(5);
+      push(4);
+      setTimeout(error.bind(null, 'boom'), 100);
+    });
 
-    var buffer = s2.getBuffer(2);
+    var buffer = s.getBuffer(2);
     assert.equal(buffer[0].value, 3);
     assert.equal(buffer[0].isData, true);
     assert.equal(buffer[1].value, 5);
 
-    assert.equal(s.getBuffer(0).length, 0);
-    assert.equal(s2.getBuffer(0).length, 1);
+    assert.equal(s.buffer.length, 1);
 
-    s.error('boom');
-
-    buffer = s2.getBuffer(0);
-    assert.equal(buffer[0].value, 4);
-    assert.equal(buffer[1].value, 'boom');
-    assert.equal(buffer[1].isError, true);
+    setTimeout(function() {
+      buffer = s.getBuffer(0);
+      assert.equal(buffer[0].value, 4);
+      assert.equal(buffer[1].value, 'boom');
+      assert.equal(buffer[1].isError, true);
+      done();
+    }, 200);
   });
 
   it('clears the buffer with `clearbuffer`', function() {
-    var s = ES();
-    var s2 = ES([s]);
-    s2.push(3);
-    s.push(5);
-    s2.push(4);
+    var s = ES(function(push, error) {
+      push(3);
+      push(5);
+      push(4);
+      setTimeout(error.bind(null, 'boom'), 100);
+    });
 
-    var buffer = s2.getBuffer(2);
+    var buffer = s.getBuffer(2);
     assert.equal(buffer[0].value, 3);
     assert.equal(buffer[0].isData, true);
     assert.equal(buffer[1].value, 5);
 
-    s2.clearBuffer();
-    assert.deepEqual(s2.getBuffer(0), []);
+    s.clearBuffer();
+    assert.deepEqual(s.getBuffer(0), []);
   });
 
-  it('does not buffers messages with flowing on (default)', function(done) {
-    var s = ES();
-    var called = 0;
-    s.push(3);
-    s.push(4);
-    s.error(new Error('boom'));
+  it('does not buffers messages with buffer set to false', function(done) {
+    var s = ES(function(push, error) {
+      push(3);
+      push(4);
+      error(new Error('boom'));
+      setTimeout(push.bind(null, 1), 50);
+    }, { buffer: false });
 
     s.on(function(x) {
-      if (called === 0) {
-        assert.equal(x.value, 1);
-      } else if (called === 1) {
-        assert.equal(x.value, 2);
-      } else {
-        assert.equal(x.value.message, 'boom2');
-        done();
-      }
-      called++;
+      assert.equal(x.value, 1);
+      done();
     });
-
-    s.push(1);
-    s.push(2);
-    s.error(new Error('boom2'));
   });
 
   it('has an addMethods method', function() {
@@ -242,26 +201,42 @@ describe('Estream', function() {
       name: 'fmap',
       fn: function() {}
     }]);
-    var p = ES();
+    var p = ES(noop);
     assert.equal(typeof p.fmap, 'function');
   });
 
   it('empties the buffer if events happened before a consumer was added', function(done) {
-    var s = ES();
-
-    s.push(3);
-    s.push(4);
-    s.error(new Error('boom'));
-    s.end('ended');
+    var called;
+    var s = ES(function(push) {
+      push(3);
+      called = true;
+    });
 
     s.on(function(x) {
+      assert.ok(called);
       assert.equal(x.value, 3);
       done();
     });
   });
 
+  it('doesnt keep a buffer if buffer option set to false', function(done) {
+    var s = ES(function(push) {
+      push(3);
+    }, { buffer: false });
+
+    s.on(function() {
+      assert.fail();
+    });
+
+    setTimeout(function() {
+      done();
+    }, 10);
+  });
+
   it('is a functor', function() {
-    var s = ES();
+    var s = ES(function(push) {
+      push(1);
+    });
     var add2 = function(x) { return x + 2; };
     var composedMap = R.pipe(add1, add2);
 
@@ -286,13 +261,15 @@ describe('Estream', function() {
       assert.equal(x.value, 2);
     });
 
-    s.push(1);
     assert.equal(composedValue, serialValue);
   });
 
   describe('map', function() {
     it('maps a function over data values', function(done) {
-      var s1 = ES();
+      var s1 = ES(function(push, error) {
+        error('error');
+        push(4);
+      });
       var called = 0;
       s1
       .map(add1)
@@ -305,12 +282,12 @@ describe('Estream', function() {
           done();
         }
       });
-      s1.error('error');
-      s1.push(4);
     });
 
     it('catches errors', function(done) {
-      var s1 = ES();
+      var s1 = ES(function(push) {
+        push(4);
+      });
       var errorFn = function() { throw new Error('boom'); };
       s1
       .map(errorFn)
@@ -319,13 +296,15 @@ describe('Estream', function() {
         assert.equal(x.value.message, 'boom');
         done();
       });
-      s1.push(4);
     });
   });
 
   describe('scan', function() {
     it('reduces pushed data events', function(done) {
-      var s = ES();
+      var s = ES(function(push) {
+        push(5);
+        push(10);
+      });
       var called = 0;
 
       s.scan(sum, 5)
@@ -338,13 +317,12 @@ describe('Estream', function() {
           done();
         }
       });
-
-      s.push(5);
-      s.push(10);
     });
 
     it('catches errors', function(done) {
-      var s1 = ES();
+      var s1 = ES(function(push) {
+        push(4);
+      });
       var errorFn = function() { throw new Error('boom'); };
       s1
       .scan(errorFn, 0)
@@ -353,13 +331,15 @@ describe('Estream', function() {
         assert.equal(x.value.message, 'boom');
         done();
       });
-      s1.push(4);
     });
   });
 
   describe('filter', function() {
     it('filters data event values', function(done) {
-      var s = ES();
+      var s = ES(function(push) {
+        push(5);
+        push(11);
+      });
       var called = 0;
 
       s.filter(isGt10)
@@ -368,13 +348,12 @@ describe('Estream', function() {
         assert.equal(called, 0);
         done();
       });
-
-      s.push(5);
-      s.push(11);
     });
 
     it('catches errors', function(done) {
-      var s1 = ES();
+      var s1 = ES(function(push) {
+        push(4);
+      });
       var errorFn = function() { throw new Error('boom'); };
       s1
       .filter(errorFn)
@@ -383,13 +362,17 @@ describe('Estream', function() {
         assert.equal(x.value.message, 'boom');
         done();
       });
-      s1.push(4);
     });
   });
 
   describe('filterEvent', function() {
     it('filters events', function(done) {
-      var s = ES();
+      var s = ES(function(push, error, end) {
+        push(5);
+        push('hello');
+        error('boom');
+        end('end');
+      });
 
       s.filterEvent(function (e) {
         return e.isEnd;
@@ -399,17 +382,18 @@ describe('Estream', function() {
         assert.deepEqual(x.value, ['end']);
         done();
       });
-
-      s.push(5);
-      s.push('hello');
-      s.error('boom');
-      s.end('end');
     });
   });
 
   describe('reduce', function() {
     it('reduces the values of a single stream', function(done) {
-      var s = ES();
+      var s = ES(function(push, error, end) {
+        push(5);
+        push(10);
+        error(new Error('blah'));
+        push(3);
+        end(2);
+      });
       var called = 0;
 
       s.reduce(sum, 0)
@@ -424,29 +408,24 @@ describe('Estream', function() {
           done();
         }
       });
-
-      s.push(5);
-      s.push(10);
-      s.error(new Error('blah'));
-      s.push(3);
-      s.end(2);
     });
 
     it('reduces the values of multiple streams', function(done) {
-      var s1 = ES();
-      var s2 = ES();
-      var s3 = ES([s1, s2]);
+      var s1 = ES(function(push, error, end) {
+        push(5);
+        setTimeout(push.bind(null, 3), 50);
+        setTimeout(end.bind(null, 4), 200);
+      });
+      var s2 = ES(function(push, error, end) {
+        push(10);
+        setTimeout(end.bind(null, 6), 500);
+      });
+      var s3 = ES.combine([s1, s2]);
 
       s3.reduce(sum, 0).on(function(event) {
         assert.equal(event.value, 28);
         done();
       });
-
-      s1.push(5);
-      s2.push(10);
-      s1.push(3);
-      s1.end(4);
-      s2.end(6);
     });
   });
 });

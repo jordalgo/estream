@@ -10,102 +10,45 @@ Estreams, or event streams, are a simple abstraction for listening to async even
 ## Event Types
 
 #### [EsData](./api/estream.md#esdata)
-These are objects that are used to represent successful data. `estream.push(new ES.data('my val'))` or, the easier way, `estream.push('my val')`, which wraps the value in an EsData object. To listen to these events:
-```javascript
-estream.on(function(x) {
-  x.isData // true
-  x.value // 'my val'
-});
-```
-Or, the easier way:
-```javascript
-estream.onData(function(x) {
-  x // 'my val'
-});
-```
+These are objects that are used to represent successful data.
 
 #### [EsError](./api/estream.md#eserror)
-These are objects that are used to represent an error, either from the source itself or internally in the stream. `estream.push(new ES.error('boom'))` or, the easier way, `estream.error('boom')`, which wraps the value in an EsError object. To listen to these events:
-```javascript
-estream.on(function(x) {
-  x.isError // true
-  x.value // 'boom'
-});
-```
-Or, the easier way:
-```javascript
-estream.onError(function(x) {
-  x // 'boom'
-});
-```
+These are objects that are used to represent an error, either from the source itself or internally in the stream.
 
 #### [EsEnd](./api/estream.md#esend)
-These are objects that are used to represent an end to an estream. `estream.push(new ES.end('end'))` or, the easier way, `estream.end('end')`, which wraps the value in an EsEnd object. All values are wrapped in an array as estreams can have multiple source estreams that end. Once an end is emitted by a stream, no more events will be emitted and all references to the consuming functions will be removed. To listen to these events:
+These are objects that are used to represent an end to an estream. All values are wrapped in an array as estreams can have multiple source estreams that end. Once an end is emitted by a stream, no more events will be emitted and all references to the consuming functions will be removed.
+
+## Example
 ```javascript
-estream.on(function(x) {
-  x.isEnd // true
-  x.value // '[end]'
+var backendStream = estream(function(push, error, end) {
+  setInterval(function() {
+    pollForData(function(err, res) {
+      if (err) {
+        error(err);
+      } else {
+        push(res);
+      }
+    });
+  }, 1000);
 });
-```
-Or, the easier way:
-```javascript
-estream.onEnd(function(x) {
-  x // '[end]'
+
+backendStream.onData(function(data) {
+  // got some data
+});
+
+backendStream.onError(function(error) {
+  // got an error
 });
 ```
 
 ## Combining Estreams
 
-Combining estreams is very easy. All you have to do is pass the streams you want to merge in an array when you create a new stream e.g. `var estream3 = ES([estream1, estream2])`: this wil flow data and errors from both estream1 and estream2 into estream3. However, the combined stream will not end until all of it's parent or source estreams have ended e.g. `estream1.end(); estream2.end` will cause `estream3` to end and emit an end event.
-
-## Examples:
-
-Basic Example:
-```javascript
-var ES = require('estreams');
-var estream = ES();
-
-estream.on(function(x) {
-  console.log('I got some data: ', x.value);
-});
-
-estream.push(5);
-```
-
-Chained Transformation:
-```javascript
-var estream = ES();
-
-estream
-.map(add1)
-.scan(sum, 10)
-.on('data', function(x) {
-  console.log(x.value);
-});
-
-estream.push(5);
-// logs "16" to the console
-```
-
-Removing a Consumer
-```javascript
-var dataConsumer = function(x) {
-  console.log('I got data: ', x);
-};
-
-var off = estream.on('data', function(x) {
-  // do something cool with data
-});
-off();
-```
+Combining estreams is very easy. All you have to do is pass the streams you want to merge in an array when you create a new stream e.g. `var estream3 = ES.combine([estream1, estream2])`: this wil flow data and errors from both estream1 and estream2 into estream3. However, the combined stream will not end until all of it's parent or source estreams have ended.
 
 ## Estream Options
-* **buffer** (default: true): If the buffer is on and events are pushed into the Estream they will get stored in the buffer (an array), then once a consumer is added, all the previous events will flow into the consumer as individual actions in the same call stack. You can also pull individual events from the buffer with `getBuffer`.
+An object passed as the second parameter when creating new estreams.
 
-Example:
-```javascript
-var estream = ES(null, { buffer: false });
-```
+* **buffer** (default: true): If the buffer is on and events are pushed into the Estream they will get stored in the buffer (an array), then once a consumer is added, all the previous events will flow into the consumer as individual actions in the same call stack. You can also pull individual events from the buffer with `getBuffer`.
 
 ## Inspiration
 
