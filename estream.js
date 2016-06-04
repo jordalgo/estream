@@ -2,7 +2,7 @@ var ES_EVENT_TYPE = '@@EsEvent';
 
 /**
  * Base Estream event object.
- * This is not exposed directly.
+ * This is not exposed.
  *
  * @constructor
  * @param {*} value
@@ -263,6 +263,8 @@ function _emptyBuffer(estream) {
  * @param {Object} opts - stream options
  */
 function Estream(opts) {
+  // these are "private" properties of this object
+  // if you attempt to access or alter them, you will get undesirable effects.
   this._isBuffering = (opts && opts.hasOwnProperty('buffer')) ? opts.buffer : true;
   this._concatEnd = new EsEnd();
   this._buffer = [];
