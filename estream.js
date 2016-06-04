@@ -1,7 +1,93 @@
-var ES_EVENT = '@@EsEvent';
+var ES_EVENT_TYPE = '@@EsEvent';
 
-var defaultOptions = {
-  buffer: true
+/**
+ * Base Estream event object.
+ * This is not exposed directly.
+ *
+ * @constructor
+ * @param {*} value
+ */
+function EsEvent(value) {
+  this.value = value;
+}
+
+EsEvent.prototype.isData = false;
+EsEvent.prototype.isError = false;
+EsEvent.prototype.isEnd = false;
+EsEvent.prototype.type = ES_EVENT_TYPE;
+
+/**
+ * Estream Data Event object.
+ *
+ * @example
+ * var ES = require('estream');
+ * var estream1 = ES(function(push) {
+ *  push(5);
+ * });
+ *
+ * @constructor
+ */
+function EsData() {
+  EsEvent.apply(this, arguments);
+}
+
+EsData.prototype = Object.create(EsEvent.prototype);
+EsData.prototype.constructor = EsData;
+EsData.prototype.isData = true;
+
+/**
+ * Estream Error Event object.
+ *
+ * @example
+ * var ES = require('estream');
+ * var estream1 = ES(function(push, error) {
+ *  error(new Error('boom'));
+ * });
+ *
+ * @constructor
+ */
+function EsError() {
+  EsEvent.apply(this, arguments);
+}
+
+EsError.prototype = Object.create(EsEvent.prototype);
+EsError.prototype.constructor = EsError;
+EsError.prototype.isError = true;
+
+/**
+ * Estream End Event object.
+ * The value kept inside this object will always be an array
+ * since a stream can have multiple source/parent streams
+ * and we want to keep a list of all the end event values.
+ *
+ * If you don't push a value, the array is empty.
+ *
+ * @example
+ * var ES = require('estream');
+ * var estream1 = ES(function(push, error, end) {
+ *  end();
+ * });
+ *
+ * @constructor
+ */
+function EsEnd() {
+  EsEvent.apply(this, arguments);
+  this.value = (arguments.length === 0) ? [] : [arguments[0]];
+}
+
+EsEnd.prototype = Object.create(EsEvent.prototype);
+EsEnd.prototype.constructor = EsEnd;
+EsEnd.prototype.isEnd = true;
+
+/**
+ * When an Estream has multiple source/parent streams
+ * this will concat the end values together in an array.
+ *
+ * @private
+ * @param {EsEnd} esEnd
+ */
+EsEnd.prototype.concat = function(esEnd) {
+  this.value = this.value.concat(esEnd.value);
 };
 
 /**
@@ -15,7 +101,7 @@ var defaultOptions = {
 function push(estream, value) {
   _processEvent(
     estream,
-    (value && value.type === ES_EVENT) ? value : new EsData(value)
+    (value && value.type === ES_EVENT_TYPE) ? value : new EsData(value)
   );
 }
 
@@ -30,7 +116,7 @@ function push(estream, value) {
 function error(estream, value) {
   _processEvent(
     estream,
-    (value && value.type === ES_EVENT) ? value : new EsError(value)
+    (value && value.type === ES_EVENT_TYPE) ? value : new EsError(value)
   );
 }
 
@@ -44,7 +130,7 @@ function error(estream, value) {
  */
 function end(estream, value) {
   if (arguments.length === 2) {
-    if (value.type === ES_EVENT) {
+    if (value.type === ES_EVENT_TYPE) {
       _processEvent(estream, value);
     } else {
       _processEvent(estream, new EsEnd(value));
@@ -167,96 +253,6 @@ function _emptyBuffer(estream) {
 }
 
 /**
- * Base Estream event object.
- * This is not exposed directly.
- *
- * @constructor
- * @param {*} value
- */
-function EsEvent(value) {
-  this.value = value;
-}
-
-EsEvent.prototype.isData = false;
-EsEvent.prototype.isError = false;
-EsEvent.prototype.isEnd = false;
-EsEvent.prototype.type = ES_EVENT;
-
-/**
- * Estream Data Event object.
- *
- * @example
- * var ES = require('estream');
- * var estream1 = ES(function(push) {
- *  push(5);
- * });
- *
- * @constructor
- */
-function EsData() {
-  EsEvent.apply(this, arguments);
-}
-
-EsData.prototype = Object.create(EsEvent.prototype);
-EsData.prototype.constructor = EsData;
-EsData.prototype.isData = true;
-
-/**
- * Estream Error Event object.
- *
- * @example
- * var ES = require('estream');
- * var estream1 = ES(function(push, error) {
- *  error(new Error('boom'));
- * });
- *
- * @constructor
- */
-function EsError() {
-  EsEvent.apply(this, arguments);
-}
-
-EsError.prototype = Object.create(EsEvent.prototype);
-EsError.prototype.constructor = EsError;
-EsError.prototype.isError = true;
-
-/**
- * Estream End Event object.
- * The value kept inside this object will always be an array
- * since a stream can have multiple source/parent streams
- * and we want to keep a list of all the end event values.
- *
- * If you don't push a value, the array is empty.
- *
- * @example
- * var ES = require('estream');
- * var estream1 = ES(function(push, error, end) {
- *  end();
- * });
- *
- * @constructor
- */
-function EsEnd() {
-  EsEvent.apply(this, arguments);
-  this.value = (arguments.length === 0) ? [] : [arguments[0]];
-}
-
-EsEnd.prototype = Object.create(EsEvent.prototype);
-EsEnd.prototype.constructor = EsEnd;
-EsEnd.prototype.isEnd = true;
-
-/**
- * When an Estream has multiple source/parent streams
- * this will concat the end values together in an array.
- *
- * @private
- * @param {EsEnd} esEnd
- */
-EsEnd.prototype.concat = function(esEnd) {
-  this.value = this.value.concat(esEnd.value);
-};
-
-/**
  * The Estream Object. To create use the exposed factory function.
  *
  * @example
@@ -267,7 +263,7 @@ EsEnd.prototype.concat = function(esEnd) {
  * @param {Object} opts - stream options
  */
 function Estream(opts) {
-  this._isBuffering = (opts && opts.hasOwnProperty('buffer')) ? opts.buffer : defaultOptions.buffer;
+  this._isBuffering = (opts && opts.hasOwnProperty('buffer')) ? opts.buffer : true;
   this._concatEnd = new EsEnd();
   this._buffer = [];
   this._sources = [];
