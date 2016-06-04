@@ -1,35 +1,28 @@
 # Estream
 
-A javascript utility library for working with stream-like events in the browser.
+A javascript utility library for working with event streams in the browser.
 
 #### [Estream API](./api/estream.md)
 
 ## Summary
-Estreams, or event streams, are a simple abstraction for listening to async events. Estreams deal with three different [event types](#event-types): data, error, and end. Estreams at their most basic are stateless transfer tools that just take in events and push them out to consumers. Unlike many other reactive libraries that conflate the concept of event streams, data streams, observables and even data within static arrays, Estream tackles a single use-case and that is async events, which can happen once or continuously throughout the life-cycle of an app.
+Estreams, or event streams, are a simple abstraction for reacting to async events. Estreams deal with three different [event types](#event-types): data, error, and end. Estreams at their most basic are stateless transfer tools that just take in events and push them out to consumers. Unlike many other reactive libraries that conflate the concept of data streams, event streams, observables and even data within static arrays, Estream tackles a single use-case and that is async events, which can happen once or continuously throughout the life-cycle of an app.
 
 ## Event Types
 
-#### [EsData](./api/estream.md#esdata)
-These are objects that are used to represent successful data.
-
-#### [EsError](./api/estream.md#eserror)
-These are objects that are used to represent an error, either from the source itself or internally in the stream.
-
-#### [EsEnd](./api/estream.md#esend)
-These are objects that are used to represent an end to an estream. All values are wrapped in an array as estreams can have multiple source estreams that end. Once an end is emitted by a stream, no more events will be emitted and all references to the consuming functions will be removed.
+* **EsData** - These are objects that are used to represent successful data.
+* **EsError** - These are objects that are used to represent an error, either from the source itself or internally in the stream.
+* **EsEnd** - These are objects that are used to represent an end to an estream. All values are wrapped in an array as estreams can have multiple source estreams that end. Once an end is emitted by a stream, no more events will be emitted and all references to the consuming functions will be removed.
 
 ## Example
 ```javascript
 var backendStream = estream(function(push, error, end) {
-  setInterval(function() {
-    pollForData(function(err, res) {
-      if (err) {
-        error(err);
-      } else {
-        push(res);
-      }
-    });
-  }, 1000);
+  pollForData(function(err, res) {
+    if (err) {
+      error(err);
+    } else {
+      push(res);
+    }
+  });
 });
 
 backendStream.onData(function(data) {
@@ -43,12 +36,12 @@ backendStream.onError(function(error) {
 
 ## Combining Estreams
 
-Combining estreams is very easy. All you have to do is pass the streams you want to merge in an array when you create a new stream e.g. `var estream3 = ES.combine([estream1, estream2])`: this wil flow data and errors from both estream1 and estream2 into estream3. However, the combined stream will not end until all of it's parent or source estreams have ended.
+Use the combine function: `var estream3 = ES.combine([estream1, estream2])`: this wil flow data and errors from both estream1 and estream2 into estream3. However, the combined stream will not end until all of it's parent/source estreams have ended.
 
 ## Estream Options
 An object passed as the second parameter when creating new estreams.
 
-* **buffer** (default: true): If the buffer is on and events are pushed into the Estream they will get stored in the buffer (an array), then once a consumer is added, all the previous events will flow into the consumer as individual actions in the same call stack. You can also pull individual events from the buffer with `getBuffer`.
+* **buffer** (default: true): If the buffer is on and events are pushed into an Estream they will get stored in the buffer (an array), then once a consumer is added, all the previous events will flow into the consumer as individual actions in the same call stack. You can also pull individual events from the buffer with `getBuffer`.
 
 ## Inspiration
 
