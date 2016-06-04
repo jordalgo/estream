@@ -13,11 +13,10 @@ var defaultOptions = {
  * @param {*} value - the value
  */
 function push(estream, value) {
-  if (value && value.type === ES_EVENT) {
-    _processEvent(estream, value);
-  } else {
-    _processEvent(estream, new EsData(value));
-  }
+  _processEvent(
+    estream,
+    (value && value.type === ES_EVENT) ? value : new EsData(value)
+  );
 }
 
 /**
@@ -29,11 +28,10 @@ function push(estream, value) {
  * @param {*} value - the value
  */
 function error(estream, value) {
-  if (value && value.type === ES_EVENT) {
-    _processEvent(estream, value);
-  } else {
-    _processEvent(estream, new EsError(value));
-  }
+  _processEvent(
+    estream,
+    (value && value.type === ES_EVENT) ? value : new EsError(value)
+  );
 }
 
 /**
