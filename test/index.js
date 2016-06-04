@@ -154,7 +154,7 @@ describe('Estream', function() {
     assert.equal(buffer[0].isData, true);
     assert.equal(buffer[1].value, 5);
 
-    assert.equal(s.buffer.length, 1);
+    assert.equal(s._buffer.length, 1);
 
     setTimeout(function() {
       buffer = s.getBuffer(0);

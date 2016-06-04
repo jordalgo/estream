@@ -67,7 +67,7 @@ function end(estream, value) {
  */
 function off(estream, consumer) {
   var foundIndex = -1;
-  estream.consumers.some(function(obj, index) {
+  estream._consumers.some(function(obj, index) {
     if (obj.fn === consumer) {
       foundIndex = index;
       return true;
@@ -75,7 +75,7 @@ function off(estream, consumer) {
     return false;
   });
   if (foundIndex !== -1) {
-    estream.consumers.splice(foundIndex, 1);
+    estream._consumers.splice(foundIndex, 1);
     return true;
   }
   return false;
@@ -93,11 +93,11 @@ function _processEvent(estream, esEvent, sourceEstream) {
   Object.freeze(esEvent);
   _emitEvent(estream, esEvent, sourceEstream);
 
-  if (!estream.consumers.length && estream._isBuffering) {
-    estream.buffer.push(esEvent);
+  if (!estream._consumers.length && estream._isBuffering) {
+    estream._buffer.push(esEvent);
   }
   if (esEvent.isEnd) {
-    estream.consumers = [];
+    estream._consumers = [];
     estream._ended = true;
   }
 }
@@ -111,7 +111,7 @@ function _processEvent(estream, esEvent, sourceEstream) {
  * @param {Estream} sourceEstream
  */
 function _emitEvent(estream, event, sourceEstream) {
-  estream.consumers.forEach(function(obj) {
+  estream._consumers.forEach(function(obj) {
     obj.fn(event, sourceEstream || estream, obj.off);
   });
 }
@@ -123,12 +123,12 @@ function _emitEvent(estream, event, sourceEstream) {
  * @param {Estream} endingStream
  */
 function _parentEnd(estream, esEnd, endingStream) {
-  var foundIndex = estream.sources.indexOf(endingStream);
+  var foundIndex = estream._sources.indexOf(endingStream);
   if (foundIndex !== -1) {
-    estream.sources.splice(foundIndex, 1);
+    estream._sources.splice(foundIndex, 1);
     estream._concatEnd.concat(esEnd);
   }
-  if (estream.sources.length === 0) {
+  if (estream._sources.length === 0) {
     _processEvent(estream, estream._concatEnd);
   }
 }
@@ -151,8 +151,8 @@ function _connect(parent, child) {
       _parentEnd(child, event, parent);
     }
   });
-  if (child.sources.indexOf(parent) === -1) {
-    child.sources.push(parent);
+  if (child._sources.indexOf(parent) === -1) {
+    child._sources.push(parent);
   }
 }
 
@@ -161,11 +161,11 @@ function _connect(parent, child) {
  * @param {Estream} estream
  */
 function _emptyBuffer(estream) {
-  estream.buffer
+  estream._buffer
   .forEach(function(event) {
     _emitEvent(estream, event);
   });
-  estream.buffer = [];
+  estream._buffer = [];
 }
 
 /**
@@ -271,9 +271,9 @@ EsEnd.prototype.concat = function(esEnd) {
 function Estream(opts) {
   this._isBuffering = (opts && opts.hasOwnProperty('buffer')) ? opts.buffer : defaultOptions.buffer;
   this._concatEnd = new EsEnd();
-  this.buffer = [];
-  this.sources = [];
-  this.consumers = [];
+  this._buffer = [];
+  this._sources = [];
+  this._consumers = [];
 }
 
 /**
@@ -300,17 +300,17 @@ Estream.prototype.on = function(consumer) {
   if (typeof consumer !== 'function') {
     throw new Error('Consumer needs to be a function.');
   }
-  if (!this.buffer.length && this._ended) {
+  if (!this._buffer.length && this._ended) {
     console.warn('The estream has ended and the buffer is empty.');
   }
-  var found = this.consumers.some(function(obj) {
+  var found = this._consumers.some(function(obj) {
     return obj.fn === consumer;
   });
   var offFn;
   if (!found) {
     offFn = off.bind(null, this, consumer);
-    this.consumers.push({ fn: consumer, off: offFn });
-    if (this._isBuffering && this.buffer.length) {
+    this._consumers.push({ fn: consumer, off: offFn });
+    if (this._isBuffering && this._buffer.length) {
       setTimeout(_emptyBuffer.bind(null, this), 0);
     }
   }
@@ -364,10 +364,10 @@ Estream.prototype.onEnd = function(consumer) {
  * @return {Array} - an array of buffered events
  */
 Estream.prototype.getBuffer = function(endPoint) {
-  var bufferLen = this.buffer.length;
+  var bufferLen = this._buffer.length;
   var ender = endPoint || bufferLen;
-  var bufferSlice = this.buffer.slice(0, ender);
-  this.buffer = this.buffer.slice(ender, bufferLen);
+  var bufferSlice = this._buffer.slice(0, ender);
+  this._buffer = this._buffer.slice(ender, bufferLen);
   return bufferSlice;
 };
 
@@ -377,7 +377,7 @@ Estream.prototype.getBuffer = function(endPoint) {
  * @name clearBuffer
  */
 Estream.prototype.clearBuffer = function() {
-  this.buffer = [];
+  this._buffer = [];
 };
 
 /**
