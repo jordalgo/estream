@@ -17,25 +17,6 @@ ES.addEstreamMethods({
 });
 ```
 
-# addSources
-
-Creates a new estream with X amount of parent estreams.
-
-**Parameters**
-
--   `estreams` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** an Array of estreams
-
-**Examples**
-
-```javascript
-var estream1 = ES();
-var estream2 = ES();
-var estream3 = ES();
-var estream4 = estream1.addSources([estream2, estream3]);
-```
-
-Returns **Estream** 
-
 # clearBuffer
 
 Remove all stored events from the buffer.
@@ -64,16 +45,15 @@ The value kept inside this object will always be an array
 since a stream can have multiple source/parent streams
 and we want to keep a list of all the end event values.
 
-If you don't push a value, the array is just empty.
+If you don't push a value, the array is empty.
 
 **Examples**
 
 ```javascript
 var ES = require('estream');
-var estream1 = ES();
-estream1.push(new Es.End('my end val'));
-// or
-estream1.end('my end val'); // which wraps this value in an EsEnd object
+var estream1 = ES(function(push, error, end) {
+ end();
+});
 ```
 
 # createEstream
@@ -122,10 +102,9 @@ Estream Data Event object.
 
 ```javascript
 var ES = require('estream');
-var estream1 = ES();
-estream1.push(new Es.Data(5));
-// or
-estream1.push(5); // which wraps this value in an EsData object
+var estream1 = ES(function(push) {
+ push(5);
+});
 ```
 
 # EsError
@@ -136,17 +115,15 @@ Estream Error Event object.
 
 ```javascript
 var ES = require('estream');
-var estream1 = ES();
-estream1.push(new Es.Error('bad thing'));
-// or
-estream1.error('bad thing'); // which wraps this value in an EsError object
+var estream1 = ES(function(push, error) {
+ error(new Error('boom'));
+});
 ```
 
 # EsEvent
 
 Base Estream event object.
-This is not exposed directly. Please use:
-EsData, EsEvent, or EsEnd - which inherit from this base object.
+This is not exposed directly.
 
 **Parameters**
 
@@ -164,7 +141,7 @@ The Estream Object. To create use the exposed factory function.
 
 ```javascript
 var ES = require('estream');
-var estream1 = ES();
+var estream1 = ES(function(push, error, end){});
 ```
 
 # filter
@@ -210,7 +187,7 @@ Returns **Estream**
 
 # getBuffer
 
-Get events out of the buffer. Useful if the stream has ended.
+Pulls events out of the buffer. Useful if the stream has ended.
 
 **Parameters**
 
@@ -238,6 +215,18 @@ var mEstream = estream.map(add1);
 ```
 
 Returns **Estream** 
+
+# off
+
+A pre-bound function that unsubscribes a consumer from a stream.
+This is returned for every "on" function.
+
+**Parameters**
+
+-   `estream` **Estream** 
+-   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** 
+
+Returns **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean)** 
 
 # on
 

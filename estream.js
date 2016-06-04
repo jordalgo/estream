@@ -1,3 +1,5 @@
+var ES_EVENT = '@@EsEvent';
+
 var defaultOptions = {
   buffer: true
 };
@@ -11,7 +13,7 @@ var defaultOptions = {
  * @param {*} value - the value
  */
 function push(estream, value) {
-  if (value && value.type === '@@EsEvent') {
+  if (value && value.type === ES_EVENT) {
     _processEvent(estream, value);
   } else {
     _processEvent(estream, new EsData(value));
@@ -27,7 +29,7 @@ function push(estream, value) {
  * @param {*} value - the value
  */
 function error(estream, value) {
-  if (value && value.type === '@@EsEvent') {
+  if (value && value.type === ES_EVENT) {
     _processEvent(estream, value);
   } else {
     _processEvent(estream, new EsError(value));
@@ -44,7 +46,7 @@ function error(estream, value) {
  */
 function end(estream, value) {
   if (arguments.length === 2) {
-    if (value.type === '@@EsEvent') {
+    if (value.type === ES_EVENT) {
       _processEvent(estream, value);
     } else {
       _processEvent(estream, new EsEnd(value));
@@ -55,8 +57,10 @@ function end(estream, value) {
 }
 
 /**
+ * A pre-bound function that unsubscribes a consumer from a stream.
+ * This is returned for every "on" function.
+ *
  * @name off
- * @private
  * @param {Estream} estream
  * @param {Function} consumer
  * @return {Boolean}
@@ -130,20 +134,9 @@ function _parentEnd(estream, esEnd, endingStream) {
 }
 
 /**
- * Add a source/parent estream to list of sources.
- *
- * @private
- * @param {Estream} estream
- * @param {Estream} sourceEstream
- */
-function _addSource(estream, sourceEstream) {
-  if (estream.sources.indexOf(sourceEstream) === -1) {
-    estream.sources.push(sourceEstream);
-  }
-}
-
-/**
- * Connects a child Estream to an Estream
+ * Connects a child Estream to an Estream.
+ * The child and the parent estreams keep references to each other
+ * until the parent ends.
  *
  * @private
  * @name connect
@@ -158,7 +151,9 @@ function _connect(parent, child) {
       _parentEnd(child, event, parent);
     }
   });
-  _addSource(child, parent);
+  if (child.sources.indexOf(parent) === -1) {
+    child.sources.push(parent);
+  }
 }
 
 /**
@@ -175,8 +170,7 @@ function _emptyBuffer(estream) {
 
 /**
  * Base Estream event object.
- * This is not exposed directly. Please use:
- * EsData, EsEvent, or EsEnd - which inherit from this base object.
+ * This is not exposed directly.
  *
  * @constructor
  * @param {*} value
@@ -188,17 +182,16 @@ function EsEvent(value) {
 EsEvent.prototype.isData = false;
 EsEvent.prototype.isError = false;
 EsEvent.prototype.isEnd = false;
-EsEvent.prototype.type = '@@EsEvent';
+EsEvent.prototype.type = ES_EVENT;
 
 /**
  * Estream Data Event object.
  *
  * @example
  * var ES = require('estream');
- * var estream1 = ES();
- * estream1.push(new Es.Data(5));
- * // or
- * estream1.push(5); // which wraps this value in an EsData object
+ * var estream1 = ES(function(push) {
+ *  push(5);
+ * });
  *
  * @constructor
  */
@@ -215,10 +208,9 @@ EsData.prototype.isData = true;
  *
  * @example
  * var ES = require('estream');
- * var estream1 = ES();
- * estream1.push(new Es.Error('bad thing'));
- * // or
- * estream1.error('bad thing'); // which wraps this value in an EsError object
+ * var estream1 = ES(function(push, error) {
+ *  error(new Error('boom'));
+ * });
  *
  * @constructor
  */
@@ -236,14 +228,13 @@ EsError.prototype.isError = true;
  * since a stream can have multiple source/parent streams
  * and we want to keep a list of all the end event values.
  *
- * If you don't push a value, the array is just empty.
+ * If you don't push a value, the array is empty.
  *
  * @example
  * var ES = require('estream');
- * var estream1 = ES();
- * estream1.push(new Es.End('my end val'));
- * // or
- * estream1.end('my end val'); // which wraps this value in an EsEnd object
+ * var estream1 = ES(function(push, error, end) {
+ *  end();
+ * });
  *
  * @constructor
  */
@@ -257,8 +248,8 @@ EsEnd.prototype.constructor = EsEnd;
 EsEnd.prototype.isEnd = true;
 
 /**
- * Use when an Estream has multiple source/parent streams
- * to concat the end values together in an array.
+ * When an Estream has multiple source/parent streams
+ * this will concat the end values together in an array.
  *
  * @private
  * @param {EsEnd} esEnd
@@ -272,7 +263,7 @@ EsEnd.prototype.concat = function(esEnd) {
  *
  * @example
  * var ES = require('estream');
- * var estream1 = ES();
+ * var estream1 = ES(function(push, error, end){});
  *
  * @constructor
  * @param {Object} opts - stream options
@@ -285,23 +276,6 @@ function Estream(opts) {
   this.sources = [];
   this.consumers = [];
 }
-
-/**
- * Creates a new estream with X amount of parent estreams.
- *
- * @name addSources
- * @param {Array} estreams - an Array of estreams
- * @return {Estream}
- *
- * @example
- * var estream1 = ES();
- * var estream2 = ES();
- * var estream3 = ES();
- * var estream4 = estream1.addSources([estream2, estream3]);
- */
-Estream.prototype.addSources = function(estreams) {
-  return createEstream([this].concat(estreams));
-};
 
 /**
  * Adds a consumer to an estream.
@@ -384,7 +358,7 @@ Estream.prototype.onEnd = function(consumer) {
 };
 
 /**
- * Get events out of the buffer. Useful if the stream has ended.
+ * Pulls events out of the buffer. Useful if the stream has ended.
  *
  * @name getBuffer
  * @param {Number} end - when to end when reading from the buffer
