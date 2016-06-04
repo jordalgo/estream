@@ -271,7 +271,6 @@ EsEnd.prototype.concat = function(esEnd) {
 function Estream(opts) {
   this._isBuffering = (opts && opts.hasOwnProperty('buffer')) ? opts.buffer : defaultOptions.buffer;
   this._concatEnd = new EsEnd();
-  this._lastSentIndex = 0;
   this.buffer = [];
   this.sources = [];
   this.consumers = [];
@@ -499,46 +498,6 @@ Estream.prototype.filterEvent = function(fn) {
   return createEstream(function(p) {
     this.on(function(event) {
       if (fn(event)) p(event);
-    });
-  }.bind(this));
-};
-
-/**
- * Returns a Estream that reduces all data and end values,
- * emitting the final value on Estream end in an EsEnd object.
- *
- * __Signature__: `(b -> a -> c) -> b -> Estream b`
- *
- * @name reduce
- * @param {Function} fn - the reducing function
- * @param {Object} acc - intial value
- * @return {Estream}
- *
- * @example
- * var estream1 = ES();
- * estream1.reduce(sum, 0).on(function(event) {
- *  if (event.isEnd) console.log(event.value);
- * });
- */
-Estream.prototype.reduce = function(fn, acc) {
-  return createEstream(function(p, er, en) {
-    this.on(function(event) {
-      if (event.isData) {
-        try {
-          acc = fn(acc, event.value);
-        } catch (err) {
-          er(err);
-        }
-      } else if (event.isError) {
-        p(event);
-      } else {
-        try {
-          en(event.value.reduce(fn, acc));
-        } catch (err) {
-          er(err);
-          en();
-        }
-      }
     });
   }.bind(this));
 };
