@@ -541,7 +541,7 @@ Estream.prototype.filterEvent = function(fn) {
  *
  * @example
  * var estream = require('estream');
- * var take = require('estream/modules/take);
+ * var take = require('estream/modules/take');
  * estream.addMethods([{
  *  name: 'take',
  *  fn: take

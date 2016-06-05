@@ -13,7 +13,7 @@ This is so you can chain methods easier.
 
 ```javascript
 var estream = require('estream');
-var take = require('estream/modules/take);
+var take = require('estream/modules/take');
 estream.addMethods([{
  name: 'take',
  fn: take
