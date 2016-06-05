@@ -24,6 +24,10 @@ EsEvent.prototype.type = ES_EVENT_TYPE;
  * var estream1 = ES(function(push) {
  *  push(5);
  * });
+ * estream1.on(function(event) {
+ *  event.isData // true
+ *  event.value // 5
+ * });
  *
  * @constructor
  */
@@ -42,6 +46,10 @@ EsData.prototype.isData = true;
  * var ES = require('estream');
  * var estream1 = ES(function(push, error) {
  *  error(new Error('boom'));
+ * });
+ * estream1.on(function(event) {
+ *  event.isError // true
+ *  event.value.message // 'boom'
  * });
  *
  * @constructor
@@ -66,6 +74,10 @@ EsError.prototype.isError = true;
  * var ES = require('estream');
  * var estream1 = ES(function(push, error, end) {
  *  end();
+ * });
+ * estream1.on(function(event) {
+ *  event.isEnd // true
+ *  event.value // []
  * });
  *
  * @constructor
@@ -92,7 +104,8 @@ EsEnd.prototype.concat = function(esEnd) {
 
 /**
  * Pushes a data event down the estream.
- * The estream param is bound automatically when creating a new estream.
+ * The estream param is bound automatically when creating a new estream
+ * and is the first parameter passed to the function you pass to createEstream.
  *
  * @name push
  * @param {Estream} estream
@@ -107,7 +120,8 @@ function push(estream, value) {
 
 /**
  * Pushes an error event down the estream.
- * The estream param is bound automatically when creating a new estream.
+ * The estream param is bound automatically when creating a new estream
+ * and is the second parameter passed to the function you pass to createEstream.
  *
  * @name error
  * @param {Estream} estream
@@ -122,7 +136,8 @@ function error(estream, value) {
 
 /**
  * Pushes an end event down the estream.
- * The estream param is bound automatically when creating a new estream.
+ * The estream param is bound automatically when creating a new estream
+ * and is the third parameter passed to the function you pass to createEstream.
  *
  * @name end
  * @param {Estream} estream
@@ -141,7 +156,7 @@ function end(estream, value) {
 }
 
 /**
- * A pre-bound function that unsubscribes a consumer from a stream.
+ * A pre-bound function that unsubscribes a consumer/subscriber from a stream.
  * This is returned for every "on" function.
  *
  * @name off
@@ -253,10 +268,11 @@ function _emptyBuffer(estream) {
 }
 
 /**
- * The Estream Object. To create use the exposed factory function.
+ * The Estream Object. To create use the exposed factory function (createEstream).
  *
  * @example
  * var ES = require('estream');
+ * // the passed function is called immediately
  * var estream1 = ES(function(push, error, end){});
  *
  * @constructor
@@ -273,14 +289,11 @@ function Estream(opts) {
 }
 
 /**
- * Adds a consumer to an estream.
- * When an event gets pushed down this estream,
- * the consumer will get as params:
+ * Adds a consumer/subscriber to an estream.
+ * When an event gets pushed down an estream, the consumer will get as params:
  * - the event (EsData | EsError | EsEnd)
  * - a reference to the estream
  * - the off/unsubscribe function
- *
- * __Signature__: `(a -> *) -> Estream a`
  *
  * @name on
  * @param {Function} consumer - the consuming function
@@ -288,7 +301,7 @@ function Estream(opts) {
  *
  * @example
  * var estream1 = es();
- * var estream1.on(function(event, estream1, unsubscribe) {
+ * var estream1.on(function(event, estream1, off) {
  *   console.log('got an event', event.value);
  * });
  */
@@ -319,6 +332,12 @@ Estream.prototype.on = function(consumer) {
  * @name onData
  * @param {Function} consumer - the consuming function
  * @return {Estream}
+ *
+ * @example
+ * var estream1 = es();
+ * var estream1.onData(function(eventValue, estream1, off) {
+ *   console.log('got an data event value', eventValue);
+ * });
  */
 Estream.prototype.onData = function(consumer) {
   return this.on(function(event, estream, offFn) {
@@ -332,6 +351,12 @@ Estream.prototype.onData = function(consumer) {
  * @name onError
  * @param {Function} consumer - the consuming function
  * @return {Estream}
+ *
+ * @example
+ * var estream1 = es();
+ * var estream1.onError(function(eventValue, estream1, off) {
+ *   console.log('got a error event value', eventValue);
+ * });
  */
 Estream.prototype.onError = function(consumer) {
   return this.on(function(event, estream, offFn) {
@@ -345,6 +370,12 @@ Estream.prototype.onError = function(consumer) {
  * @name onError
  * @param {Function} consumer - the consuming function
  * @return {Estream}
+ *
+ * @example
+ * var estream1 = es();
+ * var estream1.onEnd(function(eventValue, estream1, off) {
+ *   console.log('got a end event value', eventValue);
+ * });
  */
 Estream.prototype.onEnd = function(consumer) {
   return this.on(function(event, estream, offFn) {
@@ -354,6 +385,7 @@ Estream.prototype.onEnd = function(consumer) {
 
 /**
  * Pulls events out of the buffer. Useful if the stream has ended.
+ * This will also update the buffer; removing pulled events.
  *
  * @name getBuffer
  * @param {Number} end - when to end when reading from the buffer
@@ -378,8 +410,8 @@ Estream.prototype.clearBuffer = function() {
 
 /**
  * Returns an Estream that maps the values from data events.
- * Catches errors that occur in the mapping fn
- * and sends the error event down the Estream.
+ * It also catches errors that occur in the mapping fn
+ * and sends the error as an EsError down the Estream.
  *
  * __Signature__: `(a -> b) -> Estream EsEvent b`
  *
@@ -411,10 +443,10 @@ Estream.prototype.map = function(fn) {
 
 /**
  * Returns a Estream that scans the values from data events.
- * Catches errors that occur in the reducing function
- * and sends the error event down the Estream.
+ * It also catches errors that occur in the scanning fn
+ * and sends the error as an EsError down the Estream.
  *
- * __Signature__: `(b -> a -> c) -> b -> Estream b`
+ * __Signature__: `(b -> a -> c) -> b -> Estream EsEvent b`
  *
  * @name scan
  * @param {Function} fn - the reducing function
@@ -445,10 +477,10 @@ Estream.prototype.scan = function(fn, acc) {
 
 /**
  * Returns a estream that filters the values of data events.
- * Catches errors that occur in the filtering function
- * and sends the error event down the Estream.
+ * It also catches errors that occur in the filtering fn
+ * and sends the error as an EsError down the Estream.
  *
- * __Signature__: `(a -> Boolean) -> estream a`
+ * __Signature__: `(a -> Boolean) -> Estream EsEvent a`
  *
  * @name filter
  * @param {Function} fn - the filtering function
@@ -500,6 +532,7 @@ Estream.prototype.filterEvent = function(fn) {
 
 /**
  * Add methods to the base estream object.
+ * This is so you can chain methods easier.
  *
  * __Signature__: `[Objects] -> undefined`
  *
@@ -507,10 +540,12 @@ Estream.prototype.filterEvent = function(fn) {
  * @param {Array} addedMethods - an array of objects
  *
  * @example
- * ES.addEstreamMethods({
- *  name: 'collect',
- *  fn: function collect() {}
- * });
+ * var estream = require('estream');
+ * var take = require('estream/modules/take);
+ * estream.addMethods([{
+ *  name: 'take',
+ *  fn: take
+ * }]);
  */
 function addMethods(addedMethods) {
   // Add methods to the estream object for chainability.
@@ -546,7 +581,9 @@ function combine(sources, options) {
 
 /**
  * Estream factory function.
- * The only way to create a new blank Estream.
+ * The only way to create a new Estream.
+ * You must pass a function, which gets called immediately,
+ * to get access to 'push', 'error' and 'end'.
  *
  * @name createEstream
  * @param {Object} fn - the source function

@@ -1,6 +1,7 @@
 # addMethods
 
 Add methods to the base estream object.
+This is so you can chain methods easier.
 
 **Signature**: `[Objects] -> undefined`
 
@@ -11,10 +12,12 @@ Add methods to the base estream object.
 **Examples**
 
 ```javascript
-ES.addEstreamMethods({
- name: 'collect',
- fn: function collect() {}
-});
+var estream = require('estream');
+var take = require('estream/modules/take);
+estream.addMethods([{
+ name: 'take',
+ fn: take
+}]);
 ```
 
 # clearBuffer
@@ -54,12 +57,18 @@ var ES = require('estream');
 var estream1 = ES(function(push, error, end) {
  end();
 });
+estream1.on(function(event) {
+ event.isEnd // true
+ event.value // []
+});
 ```
 
 # createEstream
 
 Estream factory function.
-The only way to create a new blank Estream.
+The only way to create a new Estream.
+You must pass a function, which gets called immediately,
+to get access to 'push', 'error' and 'end'.
 
 **Parameters**
 
@@ -77,7 +86,8 @@ Returns **Estream**
 # end
 
 Pushes an end event down the estream.
-The estream param is bound automatically when creating a new estream.
+The estream param is bound automatically when creating a new estream
+and is the third parameter passed to the function you pass to createEstream.
 
 **Parameters**
 
@@ -87,7 +97,8 @@ The estream param is bound automatically when creating a new estream.
 # error
 
 Pushes an error event down the estream.
-The estream param is bound automatically when creating a new estream.
+The estream param is bound automatically when creating a new estream
+and is the second parameter passed to the function you pass to createEstream.
 
 **Parameters**
 
@@ -105,6 +116,10 @@ var ES = require('estream');
 var estream1 = ES(function(push) {
  push(5);
 });
+estream1.on(function(event) {
+ event.isData // true
+ event.value // 5
+});
 ```
 
 # EsError
@@ -118,12 +133,16 @@ var ES = require('estream');
 var estream1 = ES(function(push, error) {
  error(new Error('boom'));
 });
+estream1.on(function(event) {
+ event.isError // true
+ event.value.message // 'boom'
+});
 ```
 
 # EsEvent
 
 Base Estream event object.
-This is not exposed directly.
+This is not exposed.
 
 **Parameters**
 
@@ -131,7 +150,7 @@ This is not exposed directly.
 
 # Estream
 
-The Estream Object. To create use the exposed factory function.
+The Estream Object. To create use the exposed factory function (createEstream).
 
 **Parameters**
 
@@ -141,16 +160,17 @@ The Estream Object. To create use the exposed factory function.
 
 ```javascript
 var ES = require('estream');
+// the passed function is called immediately
 var estream1 = ES(function(push, error, end){});
 ```
 
 # filter
 
 Returns a estream that filters the values of data events.
-Catches errors that occur in the filtering function
-and sends the error event down the Estream.
+It also catches errors that occur in the filtering fn
+and sends the error as an EsError down the Estream.
 
-**Signature**: `(a -> Boolean) -> estream a`
+**Signature**: `(a -> Boolean) -> Estream EsEvent a`
 
 **Parameters**
 
@@ -188,6 +208,7 @@ Returns **Estream**
 # getBuffer
 
 Pulls events out of the buffer. Useful if the stream has ended.
+This will also update the buffer; removing pulled events.
 
 **Parameters**
 
@@ -198,8 +219,8 @@ Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 # map
 
 Returns an Estream that maps the values from data events.
-Catches errors that occur in the mapping fn
-and sends the error event down the Estream.
+It also catches errors that occur in the mapping fn
+and sends the error as an EsError down the Estream.
 
 **Signature**: `(a -> b) -> Estream EsEvent b`
 
@@ -218,7 +239,7 @@ Returns **Estream**
 
 # off
 
-A pre-bound function that unsubscribes a consumer from a stream.
+A pre-bound function that unsubscribes a consumer/subscriber from a stream.
 This is returned for every "on" function.
 
 **Parameters**
@@ -230,16 +251,13 @@ Returns **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 
 # on
 
-Adds a consumer to an estream.
-When an event gets pushed down this estream,
+Adds a consumer/subscriber to an estream.
 
-the consumer will get as params:
+When an event gets pushed down an estream, the consumer will get as params:
 
 -   the event (EsData | EsError | EsEnd)
 -   a reference to the estream
 -   the off/unsubscribe function
-
-**Signature**: `(a -> *) -> Estream a`
 
 **Parameters**
 
@@ -249,7 +267,7 @@ the consumer will get as params:
 
 ```javascript
 var estream1 = es();
-var estream1.on(function(event, estream1, unsubscribe) {
+var estream1.on(function(event, estream1, off) {
   console.log('got an event', event.value);
 });
 ```
@@ -264,6 +282,15 @@ A helper function for getting only data event values from Estreams.
 
 -   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
 
+**Examples**
+
+```javascript
+var estream1 = es();
+var estream1.onData(function(eventValue, estream1, off) {
+  console.log('got an data event value', eventValue);
+});
+```
+
 Returns **Estream** 
 
 # onError
@@ -273,6 +300,15 @@ A helper function for getting only error event values from Estreams.
 **Parameters**
 
 -   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
+
+**Examples**
+
+```javascript
+var estream1 = es();
+var estream1.onError(function(eventValue, estream1, off) {
+  console.log('got a error event value', eventValue);
+});
+```
 
 Returns **Estream** 
 
@@ -284,12 +320,22 @@ A helper function for getting only end event values from Estreams.
 
 -   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
 
+**Examples**
+
+```javascript
+var estream1 = es();
+var estream1.onEnd(function(eventValue, estream1, off) {
+  console.log('got a end event value', eventValue);
+});
+```
+
 Returns **Estream** 
 
 # push
 
 Pushes a data event down the estream.
-The estream param is bound automatically when creating a new estream.
+The estream param is bound automatically when creating a new estream
+and is the first parameter passed to the function you pass to createEstream.
 
 **Parameters**
 
@@ -299,10 +345,10 @@ The estream param is bound automatically when creating a new estream.
 # scan
 
 Returns a Estream that scans the values from data events.
-Catches errors that occur in the reducing function
-and sends the error event down the Estream.
+It also catches errors that occur in the scanning fn
+and sends the error as an EsError down the Estream.
 
-**Signature**: `(b -> a -> c) -> b -> Estream b`
+**Signature**: `(b -> a -> c) -> b -> Estream EsEvent b`
 
 **Parameters**
 
