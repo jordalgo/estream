@@ -16,18 +16,18 @@ var curryN = require('ramda/src/curryN');
  * var stream2 = stream1.take(3);
  */
 function take(count, es) {
-  return estream(function(push, error, end) {
-    es.on(function(event, self, off) {
-      if (event.isData) {
-        count--;
-      }
-      push(event);
-      if (count < 1) {
-        end();
-        off();
-      }
-    });
+  var s = estream();
+  es.on(function(event, self, off) {
+    if (event.isData) {
+      count--;
+    }
+    s.push(event);
+    if (count < 1) {
+      s.end();
+      off();
+    }
   });
+  return s;
 }
 
 module.exports = curryN(2, take);

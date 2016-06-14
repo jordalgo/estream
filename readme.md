@@ -15,22 +15,14 @@ Estreams, or event streams, are a simple abstraction for reacting to async event
 
 ## Example
 ```javascript
-var backendStream = estream(function(push, error, end) {
-  pollForData(function(err, res) {
-    if (err) {
-      error(err);
-    } else {
-      push(res);
-    }
-  });
+var clickStream = estream();
+var count = 0;
+document.addEventListener('click', function(e) {
+  clickStream.push(++count);
 });
 
-backendStream.onData(function(data) {
-  // got some data
-});
-
-backendStream.onError(function(error) {
-  // got an error
+clickStream.onData(function(value) {
+  // value == count
 });
 ```
 

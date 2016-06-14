@@ -67,18 +67,15 @@ estream1.on(function(event) {
 
 Estream factory function.
 The only way to create a new Estream.
-You must pass a function, which gets called immediately,
-to get access to 'push', 'error' and 'end'.
 
 **Parameters**
 
--   `fn` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** the source function
 -   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** set of estream options
 
 **Examples**
 
 ```javascript
-var estream1 = ES(function(push, error, end) {}, { buffer: false });
+var es1 = estream({ buffer: false });
 ```
 
 Returns **Estream** 
@@ -86,24 +83,22 @@ Returns **Estream**
 # end
 
 Pushes an end event down the estream.
-The estream param is bound automatically when creating a new estream
-and is the third parameter passed to the function you pass to createEstream.
 
 **Parameters**
 
--   `estream` **Estream** 
 -   `value` **Any** the value
+
+Returns **** this
 
 # error
 
 Pushes an error event down the estream.
-The estream param is bound automatically when creating a new estream
-and is the second parameter passed to the function you pass to createEstream.
 
 **Parameters**
 
--   `estream` **Estream** 
 -   `value` **Any** the value
+
+Returns **** this
 
 # EsData
 
@@ -295,25 +290,6 @@ Returns **Estream**
 
 # onError
 
-A helper function for getting only error event values from Estreams.
-
-**Parameters**
-
--   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
-
-**Examples**
-
-```javascript
-var estream1 = es();
-var estream1.onError(function(eventValue, estream1, off) {
-  console.log('got a error event value', eventValue);
-});
-```
-
-Returns **Estream** 
-
-# onError
-
 A helper function for getting only end event values from Estreams.
 
 **Parameters**
@@ -331,16 +307,34 @@ var estream1.onEnd(function(eventValue, estream1, off) {
 
 Returns **Estream** 
 
-# push
+# onError
 
-Pushes a data event down the estream.
-The estream param is bound automatically when creating a new estream
-and is the first parameter passed to the function you pass to createEstream.
+A helper function for getting only error event values from Estreams.
 
 **Parameters**
 
--   `estream` **Estream** 
+-   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
+
+**Examples**
+
+```javascript
+var estream1 = es();
+var estream1.onError(function(eventValue, estream1, off) {
+  console.log('got a error event value', eventValue);
+});
+```
+
+Returns **Estream** 
+
+# push
+
+Pushes a data event down the estream.
+
+**Parameters**
+
 -   `value` **Any** the value
+
+Returns **** this
 
 # scan
 

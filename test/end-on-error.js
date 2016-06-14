@@ -1,12 +1,11 @@
 var assert = require('assert');
-var ES = require('../estream');
+var estream = require('../estream');
 var endOnError = require('../modules/end-on-error');
 
 describe('endOnError', function() {
   it('creates an estream that ends on an error', function(done) {
-    var s1 = ES(function(push, error) {
-      setTimeout(error.bind(null, 'error'));
-    });
+    var s1 = estream();
+    setTimeout(s1.error.bind(s1, 'error'));
     var called = 0;
 
     endOnError(s1).on(function(x) {

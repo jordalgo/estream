@@ -19,15 +19,15 @@ var curryN = require('ramda/src/curryN');
  * });
  */
 function takeUntil(fn, es) {
-  return estream(function(push, error, end) {
-    es.on(function(event, _, off) {
-      push(event);
-      if (fn(event)) {
-        end();
-        off();
-      }
-    });
+  var s = estream();
+  es.on(function(event, _, off) {
+    s.push(event);
+    if (fn(event)) {
+      s.end();
+      off();
+    }
   });
+  return s;
 }
 
 module.exports = curryN(2, takeUntil);

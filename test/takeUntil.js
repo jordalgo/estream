@@ -1,17 +1,16 @@
 var assert = require('assert');
-var ES = require('../estream');
+var estream = require('../estream');
 var takeUntil = require('../modules/takeUntil');
 
 describe('takeUntil', function() {
   it('takes events until the passed function is truthy', function(done) {
     var count = 0;
-    var s = ES(function(push, error) {
-      setTimeout(function() {
-        push(1);
-        error('boom');
-        push(11);
-        push(20);
-      });
+    var s = estream();
+    setTimeout(function() {
+      s.push(1);
+      s.error('boom');
+      s.push(11);
+      s.push(20);
     });
 
     var dataOver10 = function(event) {

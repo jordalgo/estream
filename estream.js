@@ -103,59 +103,6 @@ EsEnd.prototype.concat = function(esEnd) {
 };
 
 /**
- * Pushes a data event down the estream.
- * The estream param is bound automatically when creating a new estream
- * and is the first parameter passed to the function you pass to createEstream.
- *
- * @name push
- * @param {Estream} estream
- * @param {*} value - the value
- */
-function push(estream, value) {
-  _processEvent(
-    estream,
-    (value && value.type === ES_EVENT_TYPE) ? value : new EsData(value)
-  );
-}
-
-/**
- * Pushes an error event down the estream.
- * The estream param is bound automatically when creating a new estream
- * and is the second parameter passed to the function you pass to createEstream.
- *
- * @name error
- * @param {Estream} estream
- * @param {*} value - the value
- */
-function error(estream, value) {
-  _processEvent(
-    estream,
-    (value && value.type === ES_EVENT_TYPE) ? value : new EsError(value)
-  );
-}
-
-/**
- * Pushes an end event down the estream.
- * The estream param is bound automatically when creating a new estream
- * and is the third parameter passed to the function you pass to createEstream.
- *
- * @name end
- * @param {Estream} estream
- * @param {*} value - the value
- */
-function end(estream, value) {
-  if (arguments.length === 2) {
-    if (value.type === ES_EVENT_TYPE) {
-      _processEvent(estream, value);
-    } else {
-      _processEvent(estream, new EsEnd(value));
-    }
-  } else {
-    _processEvent(estream, new EsEnd());
-  }
-}
-
-/**
  * A pre-bound function that unsubscribes a consumer/subscriber from a stream.
  * This is returned for every "on" function.
  *
@@ -287,6 +234,56 @@ function Estream(opts) {
   this._sources = [];
   this._consumers = [];
 }
+
+/**
+ * Pushes a data event down the estream.
+ *
+ * @name push
+ * @param {*} value - the value
+ * @return this
+ */
+Estream.prototype.push = function(value) {
+  _processEvent(
+    this,
+    (value && value.type === ES_EVENT_TYPE) ? value : new EsData(value)
+  );
+  return this;
+};
+
+/**
+ * Pushes an error event down the estream.
+ *
+ * @name error
+ * @param {*} value - the value
+ * @return this
+ */
+Estream.prototype.error = function(value) {
+  _processEvent(
+    this,
+    (value && value.type === ES_EVENT_TYPE) ? value : new EsError(value)
+  );
+  return this;
+};
+
+/**
+ * Pushes an end event down the estream.
+ *
+ * @name end
+ * @param {*} value - the value
+ * @return this
+ */
+Estream.prototype.end = function(value) {
+  if (arguments.length > 0) {
+    if (value.type === ES_EVENT_TYPE) {
+      _processEvent(this, value);
+    } else {
+      _processEvent(this, new EsEnd(value));
+    }
+  } else {
+    _processEvent(this, new EsEnd());
+  }
+  return this;
+};
 
 /**
  * Adds a consumer/subscriber to an estream.
@@ -424,21 +421,21 @@ Estream.prototype.clearBuffer = function() {
  * var mEstream = estream.map(add1);
  */
 Estream.prototype.map = function(fn) {
-  return createEstream(function(p, e) {
-    this.on(function(event) {
-      if (event.isData) {
-        var mappedValue;
-        try {
-          mappedValue = fn(event.value);
-          p(mappedValue);
-        } catch (err) {
-          e(err);
-        }
-      } else {
-        p(event);
+  var s = createEstream();
+  this.on(function(event) {
+    if (event.isData) {
+      var mappedValue;
+      try {
+        mappedValue = fn(event.value);
+        s.push(mappedValue);
+      } catch (err) {
+        s.error(err);
       }
-    });
-  }.bind(this));
+    } else {
+      s.push(event);
+    }
+  });
+  return s;
 };
 
 /**
@@ -458,21 +455,21 @@ Estream.prototype.map = function(fn) {
  * var sEstream = estream1.scan(sum, 0);
  */
 Estream.prototype.scan = function(fn, acc) {
-  return createEstream(function(p, e) {
-    this.on(function(event) {
-      if (event.isData) {
-        var nextAcc;
-        try {
-          nextAcc = fn(acc, event.value);
-          p(acc = nextAcc);
-        } catch (err) {
-          e(err);
-        }
-      } else {
-        p(event);
+  var s = createEstream();
+  this.on(function(event) {
+    if (event.isData) {
+      var nextAcc;
+      try {
+        nextAcc = fn(acc, event.value);
+        s.push(acc = nextAcc);
+      } catch (err) {
+        s.error(err);
       }
-    });
-  }.bind(this));
+    } else {
+      s.push(event);
+    }
+  });
+  return s;
 };
 
 /**
@@ -491,21 +488,21 @@ Estream.prototype.scan = function(fn, acc) {
  * var mEstream = estream1.filter(isEven);
  */
 Estream.prototype.filter = function(fn) {
-  return createEstream(function(p, e) {
-    this.on(function(event) {
-      if (event.isData) {
-        try {
-          if (fn(event.value)) {
-            p(event);
-          }
-        } catch (err) {
-          e(err);
+  var s = createEstream();
+  this.on(function(event) {
+    if (event.isData) {
+      try {
+        if (fn(event.value)) {
+          s.push(event);
         }
-      } else {
-        p(event);
+      } catch (err) {
+        s.error(err);
       }
-    });
-  }.bind(this));
+    } else {
+      s.push(event);
+    }
+  });
+  return s;
 };
 
 /**
@@ -523,11 +520,11 @@ Estream.prototype.filter = function(fn) {
  * @return {Estream}
  */
 Estream.prototype.filterEvent = function(fn) {
-  return createEstream(function(p) {
-    this.on(function(event) {
-      if (fn(event)) p(event);
-    });
-  }.bind(this));
+  var s = createEstream();
+  this.on(function(event) {
+    if (fn(event)) s.push(event);
+  });
+  return s;
 };
 
 /**
@@ -582,20 +579,16 @@ function combine(sources, options) {
 /**
  * Estream factory function.
  * The only way to create a new Estream.
- * You must pass a function, which gets called immediately,
- * to get access to 'push', 'error' and 'end'.
  *
  * @name createEstream
- * @param {Object} fn - the source function
  * @param {Object} options - set of estream options
  * @return {Estream}
  *
  * @example
- * var estream1 = ES(function(push, error, end) {}, { buffer: false });
+ * var es1 = estream({ buffer: false });
  */
-function createEstream(fn, options) {
+function createEstream(options) {
   var estream = new Estream(options);
-  fn(push.bind(null, estream), error.bind(null, estream), end.bind(null, estream));
   return estream;
 }
 

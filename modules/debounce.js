@@ -16,14 +16,14 @@ var curryN = require('ramda/src/curryN');
  */
 function debounce(interval, es) {
   var dataTO;
-  return estream(function(push) {
-    es.on(function(event) {
-      clearTimeout(dataTO);
-      dataTO = setTimeout(function() {
-        push(event);
-      }, interval);
-    });
+  var s = estream();
+  es.on(function(event) {
+    clearTimeout(dataTO);
+    dataTO = setTimeout(function() {
+      s.push(event);
+    }, interval);
   });
+  return s;
 }
 
 module.exports = curryN(2, debounce);

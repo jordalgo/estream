@@ -1,17 +1,16 @@
 var assert = require('assert');
-var ES = require('../estream');
+var estream = require('../estream');
 var take = require('../modules/take');
 
 describe('take', function() {
   it('takes X number of data events then ends', function(done) {
     var count = 0;
-    var s = ES(function(push, error) {
-      setTimeout(function() {
-        push(1);
-        error('boom');
-        push(2);
-        push(3);
-      });
+    var s = estream();
+    setTimeout(function() {
+      s.push(1);
+      s.error('boom');
+      s.push(2);
+      s.push(3);
     });
 
     take(2)(s).on(function(event) {

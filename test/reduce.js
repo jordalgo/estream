@@ -1,17 +1,16 @@
 var assert = require('assert');
-var ES = require('../estream');
+var estream = require('../estream');
 var reduce = require('../modules/reduce');
 var sum = function(acc, value) { return acc + value; };
 
 describe('reduce', function() {
   it('reduces the values of a single stream', function(done) {
-    var s = ES(function(push, error, end) {
-      push(5);
-      push(10);
-      error(new Error('blah'));
-      push(3);
-      end(2);
-    });
+    var s = estream();
+    s.push(5);
+    s.push(10);
+    s.error(new Error('blah'));
+    s.push(3);
+    s.end(2);
     var called = 0;
 
     reduce(sum, 0, s)
@@ -29,16 +28,14 @@ describe('reduce', function() {
   });
 
   it('reduces the values of multiple streams', function(done) {
-    var s1 = ES(function(push, error, end) {
-      push(5);
-      setTimeout(push.bind(null, 3), 50);
-      setTimeout(end.bind(null, 4), 200);
-    });
-    var s2 = ES(function(push, error, end) {
-      push(10);
-      setTimeout(end.bind(null, 6), 500);
-    });
-    var s3 = ES.combine([s1, s2]);
+    var s1 = estream();
+    s1.push(5);
+    setTimeout(s1.push.bind(s1, 3), 50);
+    setTimeout(s1.end.bind(s1, 4), 200);
+    var s2 = estream();
+    s2.push(10);
+    setTimeout(s2.end.bind(s2, 6), 500);
+    var s3 = estream.combine([s1, s2]);
 
     reduce(sum, 0, s3).on(function(event) {
       assert.equal(event.value, 28);
