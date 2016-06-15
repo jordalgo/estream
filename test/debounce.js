@@ -1,5 +1,5 @@
 var assert = require('assert');
-var estream = require('../estream');
+var estream = require('../lib');
 var debounce = require('../modules/debounce');
 
 describe('debounce', function() {

@@ -1,4 +1,4 @@
-var estream = require('../estream');
+var estream = require('../lib');
 var curryN = require('ramda/src/curryN');
 
 /**

@@ -1,5 +1,5 @@
 var assert = require('assert');
-var estream = require('../estream');
+var estream = require('../lib');
 var reduce = require('../modules/reduce');
 var sum = function(acc, value) { return acc + value; };
 

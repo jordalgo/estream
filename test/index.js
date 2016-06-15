@@ -1,5 +1,5 @@
 var assert = require('assert');
-var estream = require('../estream');
+var estream = require('../lib');
 var R = require('ramda');
 
 var add1 = function(x) { return x + 1; };

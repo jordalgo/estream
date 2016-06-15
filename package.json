@@ -2,11 +2,12 @@
   "name": "estream",
   "version": "2.0.0",
   "description": "A javascript library with a simplified take on event streams.",
-  "main": "estream.js",
+  "main": "lib/index.js",
   "dependencies": {
     "ramda": "^0.21.0"
   },
   "devDependencies": {
+    "browserify": "^13.0.1",
     "documentation": "^4.0.0-beta2",
     "eslint": "^2.5.3",
     "eslint-config-airbnb": "^6.2.0",
@@ -16,7 +17,8 @@
   "scripts": {
     "lint": "eslint test/ lib/",
     "test": "mocha -R spec test/*.js",
-    "docs": "node generate-api.js"
+    "docs": "node generate-api.js",
+    "build": "browserify -s estream lib/index.js > estream.js"
   },
   "repository": {
     "type": "git",

@@ -1,4 +1,4 @@
-var estream = require('../estream');
+var estream = require('../lib');
 
 /**
  * Returns a new Estream that ends on any error.

@@ -1,5 +1,5 @@
 var assert = require('assert');
-var estream = require('../estream');
+var estream = require('../lib');
 var endOnError = require('../modules/end-on-error');
 
 describe('endOnError', function() {
