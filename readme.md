@@ -35,7 +35,7 @@ An object passed as the second parameter when creating new estreams.
 
 * **buffer** (default: true): If the buffer is on and events are pushed into an Estream they will get stored in the buffer (an array), then once a consumer is added, all the previous events will flow into the consumer as individual actions in the same call stack. You can also pull individual events from the buffer with `getBuffer`.
 
-## Uni-Directional
+## Unidirectional
 Estreams flow one way. A consumer cannot trigger an estream to push data or execute a function, nor can it pass data up the stream to be used in some way. However, because anything that has acesss to a stream can push data into it, you can set up a circular flow of reactive estreams. For example:
 
 ```javascript
