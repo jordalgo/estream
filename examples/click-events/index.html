@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Estream - click events</title>
+  </head>
+  <body>
+    <div class="title-container">
+      <h1>Sum</h1>
+    </div>
+    <p><a class="button">Click Me</a></p>
+    <p><strong>Click Count:</strong> <span class="count">0</span></p>
+    <p><strong>Map Click Count:</strong> <span class="map-count">0</span></p>
+    <p><strong>Scan Click Count:</strong> <span class="scan-count">0</span></p>
+    <script type="text/javascript" src="../../estream.js"></script>
+    <script type="text/javascript">
+      var clickCount = 0;
+      var s = estream();
+      var countEl = document.querySelector('.count');
+      var mapCountEl = document.querySelector('.map-count');
+      var scanCountEl = document.querySelector('.scan-count');
+
+      document.querySelector('.button').addEventListener('click', function() {
+        s.push(++clickCount);
+      });
+      
+      // normal counter
+      s.onData(function(val) {
+        countEl.innerHTML = val;
+      });
+
+      // map counter
+      s
+      .map(function(x) {
+        return x * 2;
+      })
+      .onData(function(val) {
+        mapCountEl.innerHTML = val;
+      });
+
+      // scan counter
+      s
+      .scan(function(acc, val) {
+        return acc + val;
+      }, 0)
+      .onData(function(val) {
+        scanCountEl.innerHTML = val;
+      });
+
+    </script>
+  </body>
+</html>

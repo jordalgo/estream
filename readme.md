@@ -26,6 +26,8 @@ clickStream.onData(function(value) {
 });
 ```
 
+[More Examples](./examples)
+
 ## Combining Estreams
 
 Use the combine function: `var estream3 = ES.combine([estream1, estream2])`: this wil flow data and errors from both estream1 and estream2 into estream3. However, the combined stream will not end until all of it's parent/source estreams have ended.
