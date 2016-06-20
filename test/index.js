@@ -122,13 +122,17 @@ describe('Estream', function() {
     setTimeout(done, 10);
   });
 
-  it('freezes event objects that are emitted', function(done) {
+  it('emits unique event objects', function(done) {
     var s = estream();
-    s.push(5);
+    s.push({ val: 5 });
 
     s.on(function(event) {
-      event.value = 'bad';
-      assert.equal(event.value, 5);
+      // try to mess up this event value
+      event.value.val = 'bad';
+    });
+
+    s.on(function(event) {
+      assert.deepEqual(event.value, { val: 5 });
       done();
     });
   });
