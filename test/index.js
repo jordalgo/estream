@@ -124,15 +124,17 @@ describe('Estream', function() {
 
   it('emits unique event objects', function(done) {
     var s = estream();
-    s.push({ val: 5 });
+    s.push(5);
 
     s.on(function(event) {
-      // try to mess up this event value
-      event.value.val = 'bad';
+      // try to mess up this event's value and isData
+      event.value = 'bad';
+      event.isData = false;
     });
 
     s.on(function(event) {
-      assert.deepEqual(event.value, { val: 5 });
+      assert.deepEqual(event.value, 5);
+      assert.ok(event.isData);
       done();
     });
   });
