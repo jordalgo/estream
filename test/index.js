@@ -276,19 +276,6 @@ describe('Estream', function() {
         }
       });
     });
-
-    it('catches errors', function(done) {
-      var s1 = estream();
-      s1.push(4);
-      var errorFn = function() { throw new Error('boom'); };
-      s1
-      .map(errorFn)
-      .on(function(x) {
-        assert.ok(x.isError);
-        assert.equal(x.value.message, 'boom');
-        done();
-      });
-    });
   });
 
   describe('scan', function() {
@@ -309,20 +296,6 @@ describe('Estream', function() {
         }
       });
     });
-
-    it('catches errors', function(done) {
-      var s1 = estream();
-      var errorFn = function() { throw new Error('boom'); };
-      s1.push(4);
-
-      s1
-      .scan(errorFn, 0)
-      .on(function(x) {
-        assert.ok(x.isError);
-        assert.equal(x.value.message, 'boom');
-        done();
-      });
-    });
   });
 
   describe('filter', function() {
@@ -336,38 +309,6 @@ describe('Estream', function() {
       .on(function(x) {
         assert.equal(x.value, 11);
         assert.equal(called, 0);
-        done();
-      });
-    });
-
-    it('catches errors', function(done) {
-      var s1 = estream();
-      var errorFn = function() { throw new Error('boom'); };
-      s1.push(4);
-      s1
-      .filter(errorFn)
-      .on(function(x) {
-        assert.ok(x.isError);
-        assert.equal(x.value.message, 'boom');
-        done();
-      });
-    });
-  });
-
-  describe('filterEvent', function() {
-    it('filters events', function(done) {
-      var s = estream();
-      s.push(5);
-      s.push('hello');
-      s.error('boom');
-      s.end('end');
-
-      s.filterEvent(function (e) {
-        return e.isEnd;
-      })
-      .on(function(x) {
-        assert.ok(x.isEnd);
-        assert.deepEqual(x.value, ['end']);
         done();
       });
     });
