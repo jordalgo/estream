@@ -1,6 +1,6 @@
 {
   "name": "estream",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A javascript library with a simplified take on event streams.",
   "main": "lib/index.js",
   "dependencies": {
