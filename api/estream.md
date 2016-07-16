@@ -81,14 +81,15 @@ The Estream Object. To create use the exposed factory function (createEstream).
 
 **Parameters**
 
--   `opts` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** stream options
+-   `startFn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the function to fire when the first subscriber is added
+-   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** stream options
 
 **Examples**
 
 ```javascript
 var ES = require('estream');
-// the passed function is called immediately
-var estream1 = ES(function(push, error, end){});
+// the passed function is called on the next event loop
+var estream1 = ES(function(estream1){});
 ```
 
 # push
@@ -158,7 +159,7 @@ A helper function for getting only data event values from Estreams.
 
 ```javascript
 var estream1 = es();
-var estream1.onData(function(eventValue, estream1, off) {
+var estream1.onData(function(eventValue, history, estream1, off) {
   console.log('got an data event value', eventValue);
 });
 ```
@@ -177,7 +178,7 @@ A helper function for getting only error event values from Estreams.
 
 ```javascript
 var estream1 = es();
-var estream1.onError(function(eventValue, estream1, off) {
+var estream1.onError(function(eventValue, history, estream1, off) {
   console.log('got a error event value', eventValue);
 });
 ```
@@ -196,39 +197,33 @@ A helper function for getting only end event values from Estreams.
 
 ```javascript
 var estream1 = es();
-var estream1.onEnd(function(eventValue, estream1, off) {
+var estream1.onEnd(function(eventValue, history, estream1, off) {
   console.log('got a end event value', eventValue);
 });
 ```
 
 Returns **Estream** 
 
-# getBuffer
+# getHistory
 
-Pulls events out of the buffer. Useful if the stream has ended.
-This will also update the buffer; removing pulled events.
+Returns a record of events that have occured (if the stream is keeping a history).
 
-**Parameters**
+Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** an array of events that have already occured
 
--   `end` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)** when to end when reading from the buffer
+# clearHistory
 
-Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)** an array of buffered events
-
-# clearBuffer
-
-Remove all stored events from the buffer.
+Remove all stored events from the history.
 
 # map
 
 Returns an Estream that maps the values from data events.
-It also catches errors that occur in the mapping fn
-and sends the error as an EsError down the Estream.
 
 **Signature**: `(a -> b) -> Estream EsEvent b`
 
 **Parameters**
 
 -   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the mapping function
+-   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** set of estream options
 
 **Examples**
 
@@ -242,8 +237,6 @@ Returns **Estream**
 # scan
 
 Returns a Estream that scans the values from data events.
-It also catches errors that occur in the scanning fn
-and sends the error as an EsError down the Estream.
 
 **Signature**: `(b -> a -> c) -> b -> Estream EsEvent b`
 
@@ -251,6 +244,7 @@ and sends the error as an EsError down the Estream.
 
 -   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the reducing function
 -   `acc` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** intial value
+-   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** set of estream options
 
 **Examples**
 
@@ -264,14 +258,13 @@ Returns **Estream**
 # filter
 
 Returns a estream that filters the values of data events.
-It also catches errors that occur in the filtering fn
-and sends the error as an EsError down the Estream.
 
 **Signature**: `(a -> Boolean) -> Estream EsEvent a`
 
 **Parameters**
 
 -   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the filtering function
+-   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** set of estream options
 
 **Examples**
 
@@ -281,26 +274,6 @@ var mEstream = estream1.filter(isEven);
 ```
 
 Returns **estream** 
-
-# filterEvent
-
-Creates a new Estream that filters EsEvents themselves,
-as opposed to the data within an EsData event.
-
-**Parameters**
-
--   `fn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the filtering function
-
-**Examples**
-
-```javascript
-var estream1 = ES();
-estream1.filterEvent(function(e) {
- return e.isData;
-});
-```
-
-Returns **Estream** 
 
 # addMethods
 

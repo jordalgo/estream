@@ -9,5 +9,5 @@ modules.forEach(function(module) {
   execSync(cmdBase + moduleFolder + module + ' -o api/' + module.replace('.js', '.md'));
 });
 
-execSync(cmdBase + 'estream.js -o api/estream.md');
+execSync(cmdBase + 'lib/index.js -o api/estream.md');
 
