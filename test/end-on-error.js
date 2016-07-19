@@ -4,9 +4,12 @@ var endOnError = require('../modules/end-on-error');
 
 describe('endOnError', function() {
   it('creates an estream that ends on an error', function(done) {
-    var s1 = estream();
-    setTimeout(s1.error.bind(s1, 'error'));
     var called = 0;
+    var s1 = estream({
+      start: function(push, error) {
+        error('error');
+      }
+    });
 
     endOnError(s1).on(function(x) {
       if (called === 0) {

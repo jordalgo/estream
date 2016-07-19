@@ -5,10 +5,13 @@ var safeScan = require('../modules/safeScan');
 describe('safeScan', function() {
   it('reduces pushed data events', function(done) {
     var called = 0;
-    var s = estream();
     var sum = function(acc, value) { return acc + value; };
-    s.push(5);
-    s.push(10);
+    var s = estream({
+      start: function(push) {
+        push(5);
+        push(10);
+      }
+    });
 
     safeScan(sum, 5, s)
     .on(function(x) {
@@ -23,9 +26,12 @@ describe('safeScan', function() {
   });
 
   it('catches errors', function(done) {
-    var s1 = estream();
+    var s1 = estream({
+      start: function(push) {
+        push(4);
+      }
+    });
     var errorFn = function() { throw new Error('boom'); };
-    s1.push(4);
 
     safeScan(errorFn, 0, s1)
     .on(function(x) {

@@ -20,25 +20,28 @@ var curryN = require('ramda/src/curryN');
  * });
  */
 function reduce(fn, acc, es) {
-  var s = estream();
-  es.on(function(event) {
-    if (event.isData) {
-      try {
-        acc = fn(acc, event.value);
-      } catch (err) {
-        s.error(err);
-      }
-    } else if (event.isError) {
-      s.push(event);
-    } else {
-      try {
-        s.end(event.value.reduce(fn, acc));
-      } catch (err) {
-        s.error(err).end();
-      }
+  return estream({
+    start: function(push, error, end) {
+      return es.on(function(event) {
+        if (event.isData) {
+          try {
+            acc = fn(acc, event.value);
+          } catch (err) {
+            error(err);
+          }
+        } else if (event.isError) {
+          push(event);
+        } else {
+          try {
+            end(event.value.reduce(fn, acc));
+          } catch (err) {
+            error(err);
+            end();
+          }
+        }
+      });
     }
   });
-  return s;
 }
 
 module.exports = curryN(3, reduce);

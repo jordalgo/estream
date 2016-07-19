@@ -19,20 +19,22 @@ var curryN = require('ramda/src/curryN');
  * var sEstream = safeScan(sum, 0, estream1);
  */
 function safeScan(fn, acc, es) {
-  var s = estream();
-  es.on(function(event) {
-    if (event.isData) {
-      try {
-        var nextAcc = fn(acc, event.value);
-        s.push(acc = nextAcc);
-      } catch (e) {
-        s.error(e);
-      }
-    } else {
-      s.push(event);
+  return estream({
+    start: function(push, error) {
+      return es.on(function(event) {
+        if (event.isData) {
+          try {
+            var nextAcc = fn(acc, event.value);
+            push(acc = nextAcc);
+          } catch (e) {
+            error(e);
+          }
+        } else {
+          push(event);
+        }
+      });
     }
   });
-  return s;
 }
 
 module.exports = curryN(3, safeScan);

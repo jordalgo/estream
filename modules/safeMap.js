@@ -18,20 +18,22 @@ var curryN = require('ramda/src/curryN');
  * var mEstream = safeMap(add1, estream);
  */
 function safeMap(fn, es) {
-  var s = estream();
-  es.on(function(event) {
-    if (event.isData) {
-      try {
-        var mappedVal = fn(event.value);
-        s.push(mappedVal);
-      } catch (e) {
-        s.error(e);
-      }
-    } else {
-      s.push(event);
+  return estream({
+    start: function(push, error) {
+      return es.on(function(event) {
+        if (event.isData) {
+          try {
+            var mappedVal = fn(event.value);
+            push(mappedVal);
+          } catch (e) {
+            error(e);
+          }
+        } else {
+          push(event);
+        }
+      });
     }
   });
-  return s;
 }
 
 module.exports = curryN(2, safeMap);

@@ -18,21 +18,23 @@ var curryN = require('ramda/src/curryN');
  * var mEstream = safeFilter(isEven, estream1);
  */
 function safeFilter(fn, es) {
-  var s = estream();
-  es.on(function(event) {
-    if (event.isData) {
-      try {
-        if (fn(event.value)) {
-          s.push(event);
+  return estream({
+    start: function(push, error) {
+      return es.on(function(event) {
+        if (event.isData) {
+          try {
+            if (fn(event.value)) {
+              push(event);
+            }
+          } catch (e) {
+            error(e);
+          }
+        } else {
+          push(event);
         }
-      } catch (e) {
-        s.error(e);
-      }
-    } else {
-      s.push(event);
+      });
     }
   });
-  return s;
 }
 
 module.exports = curryN(2, safeFilter);

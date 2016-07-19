@@ -5,12 +5,13 @@ var take = require('../modules/take');
 describe('take', function() {
   it('takes X number of data events then ends', function(done) {
     var count = 0;
-    var s = estream();
-    setTimeout(function() {
-      s.push(1);
-      s.error('boom');
-      s.push(2);
-      s.push(3);
+    var s = estream({
+      start: function(push, error) {
+        push(1);
+        error('boom');
+        push(2);
+        push(3);
+      }
     });
 
     take(2)(s).on(function(event) {

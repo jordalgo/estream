@@ -5,10 +5,13 @@ var safeFilter = require('../modules/safeFilter');
 describe('safeFilter', function() {
   it('filters data event values', function(done) {
     var called = 0;
-    var s = estream();
     var isGt10 = function(a) { return a > 10; };
-    s.push(5);
-    s.push(11);
+    var s = estream({
+      start: function(push) {
+        push(5);
+        push(11);
+      }
+    });
 
     safeFilter(isGt10, s)
     .on(function(x) {
@@ -19,9 +22,12 @@ describe('safeFilter', function() {
   });
 
   it('catches errors', function(done) {
-    var s1 = estream();
+    var s1 = estream({
+      start: function(push) {
+        push(4);
+      }
+    });
     var errorFn = function() { throw new Error('boom'); };
-    s1.push(4);
     safeFilter(errorFn, s1)
     .on(function(x) {
       assert.ok(x.isError);
