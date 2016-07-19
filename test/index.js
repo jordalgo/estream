@@ -129,7 +129,7 @@ describe('Estream', function() {
     });
   });
 
-  it('will call re call start if new subscribers are added after stop', function(done) {
+  it('will call re-call start if new subscribers are added after stop', function(done) {
     var startCalled = 0;
     var s = estream({
       start: function(push) {

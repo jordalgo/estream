@@ -14,10 +14,6 @@ Estream Data Event object.
 **Examples**
 
 ```javascript
-var ES = require('estream');
-var estream1 = ES(function(push) {
- push(5);
-});
 estream1.on(function(event) {
  event.isData // true
  event.value // 5
@@ -27,14 +23,11 @@ estream1.on(function(event) {
 # EsError
 
 Estream Error Event object.
+Passed value does not have to be of type Error.
 
 **Examples**
 
 ```javascript
-var ES = require('estream');
-var estream1 = ES(function(push, error) {
- error(new Error('boom'));
-});
 estream1.on(function(event) {
  event.isError // true
  event.value.message // 'boom'
@@ -53,10 +46,6 @@ If you don't push a value, the array is empty.
 **Examples**
 
 ```javascript
-var ES = require('estream');
-var estream1 = ES(function(push, error, end) {
- end();
-});
 estream1.on(function(event) {
  event.isEnd // true
  event.value // []
@@ -65,32 +54,15 @@ estream1.on(function(event) {
 
 # off
 
-A pre-bound function that unsubscribes a consumer/subscriber from a stream.
+A pre-bound function that unsubscribes a subscriber from a stream.
 This is returned for every "on" function.
 
 **Parameters**
 
 -   `estream` **Estream** 
--   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** 
+-   `subscriber` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** 
 
-Returns **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean)** 
-
-# Estream
-
-The Estream Object. To create use the exposed factory function (createEstream).
-
-**Parameters**
-
--   `startFn` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the function to fire when the first subscriber is added
--   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** stream options
-
-**Examples**
-
-```javascript
-var ES = require('estream');
-// the passed function is called on the next event loop
-var estream1 = ES(function(estream1){});
-```
+Returns **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean)** if the subscriber is found
 
 # push
 
@@ -98,9 +70,20 @@ Pushes a data event down the estream.
 
 **Parameters**
 
+-   `estream` **Estream** this value is prebound
 -   `value` **Any** the value
 
-Returns **** this
+**Examples**
+
+```javascript
+var estream1 = ES({
+  start: function(push) {
+     push(5);
+  }
+});
+```
+
+Returns **Estream** 
 
 # error
 
@@ -108,9 +91,20 @@ Pushes an error event down the estream.
 
 **Parameters**
 
+-   `estream` **Estream** this value is prebound
 -   `value` **Any** the value
 
-Returns **** this
+**Examples**
+
+```javascript
+var estream1 = ES({
+  start: function(push, error) {
+    error(new Error('boom'));
+  }
+});
+```
+
+Returns **Estream** 
 
 # end
 
@@ -118,29 +112,61 @@ Pushes an end event down the estream.
 
 **Parameters**
 
+-   `estream` **Estream** this value is prebound
 -   `value` **Any** the value
+
+**Examples**
+
+```javascript
+var estream1 = ES({
+  start: function(push, error, end) {
+    end();
+  }
+});
+```
 
 Returns **** this
 
+# Estream
+
+The Estream Object. To create use the exposed factory function.
+
+**Parameters**
+
+-   `sink` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** an object with a mandatory 'start' function
+    and optional 'stop' function
+-   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** stream options
+
+**Examples**
+
+```javascript
+var ES = require('estream');
+var estream1 = ES({
+ start: function(push, error, end) { return x; },
+ stop: function(x) {}
+});
+```
+
 # on
 
-Adds a consumer/subscriber to an estream.
+Adds a subscriber to an estream.
 
-When an event gets pushed down an estream, the consumer will get as params:
+When an event gets pushed down an estream, the subscriber will get as params:
 
 -   the event (EsData | EsError | EsEnd)
--   a reference to the estream
+-   the history (an array of past events, if the stream is maintaining a history)
+-   a reference to the source estream
 -   the off/unsubscribe function
 
 **Parameters**
 
--   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
+-   `subscriber` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
 
 **Examples**
 
 ```javascript
 var estream1 = es();
-var estream1.on(function(event, estream1, off) {
+var estream1.on(function(event, history, estream1, off) {
   console.log('got an event', event.value);
 });
 ```
@@ -153,13 +179,12 @@ A helper function for getting only data event values from Estreams.
 
 **Parameters**
 
--   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
+-   `subscriber` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
 
 **Examples**
 
 ```javascript
-var estream1 = es();
-var estream1.onData(function(eventValue, history, estream1, off) {
+estream1.onData(function(eventValue, history, estream1, off) {
   console.log('got an data event value', eventValue);
 });
 ```
@@ -172,13 +197,12 @@ A helper function for getting only error event values from Estreams.
 
 **Parameters**
 
--   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
+-   `subscriber` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
 
 **Examples**
 
 ```javascript
-var estream1 = es();
-var estream1.onError(function(eventValue, history, estream1, off) {
+estream1.onError(function(eventValue, history, estream1, off) {
   console.log('got a error event value', eventValue);
 });
 ```
@@ -191,13 +215,12 @@ A helper function for getting only end event values from Estreams.
 
 **Parameters**
 
--   `consumer` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
+-   `subscriber` **[Function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** the consuming function
 
 **Examples**
 
 ```javascript
-var estream1 = es();
-var estream1.onEnd(function(eventValue, history, estream1, off) {
+estream1.onEnd(function(eventValue, history, estream1, off) {
   console.log('got a end event value', eventValue);
 });
 ```
@@ -228,7 +251,6 @@ Returns an Estream that maps the values from data events.
 **Examples**
 
 ```javascript
-var estream = ES();
 var mEstream = estream.map(add1);
 ```
 
@@ -249,7 +271,6 @@ Returns a Estream that scans the values from data events.
 **Examples**
 
 ```javascript
-var estream1 = ES();
 var sEstream = estream1.scan(sum, 0);
 ```
 
@@ -269,7 +290,6 @@ Returns a estream that filters the values of data events.
 **Examples**
 
 ```javascript
-var estream1 = ES();
 var mEstream = estream1.filter(isEven);
 ```
 
@@ -326,7 +346,13 @@ The only way to create a new Estream.
 **Examples**
 
 ```javascript
-var es1 = estream({ buffer: false });
+var es1 = estream(
+  {
+    start: function(push, error, end) { return x; }
+    stop: function(x) {}
+  },
+  { history: 1 }
+);
 ```
 
 Returns **Estream** 
