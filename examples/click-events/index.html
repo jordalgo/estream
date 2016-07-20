@@ -15,15 +15,23 @@
     <script type="text/javascript" src="../../estream.js"></script>
     <script type="text/javascript">
       var clickCount = 0;
-      var s = estream();
       var countEl = document.querySelector('.count');
       var mapCountEl = document.querySelector('.map-count');
       var scanCountEl = document.querySelector('.scan-count');
 
-      document.querySelector('.button').addEventListener('click', function() {
-        s.push(++clickCount);
+
+      var s = estream({
+        start: function(push) {
+          function clickListener() {
+            push(++clickCount);
+          }
+          var button = document.querySelector('.button');
+          button.addEventListener('click', clickListener);
+
+          return button.removeEventListener.bind(null, 'click', clickListener);
+        }
       });
-      
+
       // normal counter
       s.onData(function(val) {
         countEl.innerHTML = val;
