@@ -12,7 +12,7 @@ A big usecase for this library are "push" events or rather events that you don't
 
 When you create a new estream you pass an object with a mandatory `start` function and an optional `stop` function. When the first subscriber is added the `start` function is called during the run of the next event loop (so you can add multiple subscribers without worrying about missing an event). When the last subscriber is removed (or unsubscribes) then the `stop` function is called (if it exists and also on the next event loop). The stop function is optional because ultimately it is up to this sink/creator object to decide the events that get passed into a stream.
 
-The `start` will only ever get re-called if all subscribers have been removed, a `stop` function exists, the stream has not ended, and a new subscriber gets added. It **does not** get recalled every time a new subscriber is added (unlike RxJS).
+**Note**: The `start` will only ever get re-called if all subscribers have been removed, a `stop` function exists (or `start` returns a function), the stream has not ended, and a new subscriber gets added. It **does not** get recalled every time a new subscriber is added (unlike RxJS).
 
 ```javascript
 var clickStream = estream({

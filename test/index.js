@@ -146,13 +146,58 @@ describe('Estream', function() {
       });
     });
 
-    it('will call re-call start if new subscribers are added after stop', function(done) {
+    it('re-calls start if new subscribers added after stop & stop fn exists', function(done) {
       var startCalled = 0;
       var s = estream({
         start: function(push) {
           startCalled++;
           if (startCalled === 2) {
             done();
+          } else {
+            push(1);
+          }
+        },
+        stop: function() {}
+      });
+
+      s.on(function(d, h, _, off) {
+        off();
+        setTimeout(function() {
+          s.on(function() {});
+        }, 500);
+      });
+    });
+
+    it('re-calls start if new subscribers added after stop & start returns a fn', function(done) {
+      var startCalled = 0;
+      var s = estream({
+        start: function(push) {
+          startCalled++;
+          if (startCalled === 2) {
+            done();
+          } else {
+            push(1);
+          }
+          return function stop() {};
+        }
+      });
+
+      s.on(function(d, h, _, off) {
+        off();
+        setTimeout(function() {
+          s.on(function() {});
+        }, 500);
+      });
+    });
+
+    it('will not re-call start if new subscribers added after stop' +
+        '& no stop & start does not return a fn', function(done) {
+      var startCalled = 0;
+      var s = estream({
+        start: function(push) {
+          startCalled++;
+          if (startCalled === 2) {
+            assert.fail();
           } else {
             push(1);
           }
@@ -165,6 +210,31 @@ describe('Estream', function() {
           s.on(function() {});
         }, 500);
       });
+
+      setTimeout(done, 1000);
+    });
+
+    it('will not re-call start if estream has ended', function(done) {
+      var startCalled = 0;
+      var s = estream({
+        start: function(push, error, end) {
+          startCalled++;
+          if (startCalled === 2) {
+            assert.fail();
+          } else {
+            end();
+          }
+        }
+      });
+
+      s.on(function(d, h, _, off) {
+        off();
+        setTimeout(function() {
+          s.on(function() {});
+        }, 500);
+      });
+
+      setTimeout(done, 1000);
     });
 
     it('wont call stop if a subscriber is added ' +
