@@ -295,6 +295,22 @@ var mEstream = estream1.filter(isEven);
 
 Returns **estream** 
 
+# concat
+
+Returns an estream that combines
+any number of streams with the current stream.
+Inherits the history option from the main stream.
+
+Takes X number of estreams as args.
+
+**Examples**
+
+```javascript
+var mEstream = estream1.concat(estream2, estream3);
+```
+
+Returns **Estream** 
+
 # addMethods
 
 Add methods to the base estream object.

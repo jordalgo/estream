@@ -384,6 +384,81 @@ describe('Estream', function() {
     });
   });
 
+  describe('concat', function() {
+    it('can concat multiple estreams', function(done) {
+      var s1 = estream({
+        start: function(push) {
+          push(1);
+          setTimeout(function() {
+            push('hello');
+          }, 100);
+        }
+      });
+      var s2 = estream({
+        start: function(push) {
+          push(2);
+          setTimeout(function() {
+            push('bye');
+          }, 200);
+        }
+      });
+
+      var called = 0;
+      s1
+      .concat(s2)
+      .on(function(x, _, sourceEstream) {
+        if (called === 0) {
+          assert.equal(x.value, 1);
+          assert.equal(sourceEstream, s1);
+        } else if (called === 1) {
+          assert.equal(x.value, 2);
+          assert.equal(sourceEstream, s2);
+        } else if (called === 2) {
+          assert.equal(x.value, 'hello');
+          assert.equal(sourceEstream, s1);
+        } else if (called === 3) {
+          assert.deepEqual(x.value, 'bye');
+          assert.equal(sourceEstream, s2);
+          done();
+        }
+        called++;
+      });
+    });
+
+    it('calls stop on both source streams when the combined subscriber is removed', function(done) {
+      var s1StopCalled = false;
+      var s2StopCalled = false;
+      var s1 = estream({
+        start: function(push) {
+          push(1);
+        },
+        stop: function() {
+          s1StopCalled = true;
+        }
+      });
+      var s2 = estream({
+        start: function(push) {
+          push(2);
+        },
+        stop: function() {
+          s2StopCalled = true;
+        }
+      });
+
+      s2
+      .concat(s1)
+      .on(function(x, _, sourceEstream, off) {
+        off();
+      });
+
+      setTimeout(function() {
+        assert(s1StopCalled);
+        assert(s2StopCalled);
+        done();
+      }, 100);
+    });
+  });
+
   describe('combine', function() {
     it('can combine multiple source estreams', function(done) {
       var s1 = estream({

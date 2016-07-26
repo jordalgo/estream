@@ -100,12 +100,15 @@ EsEnd.prototype.concat = function(esEnd) {
  * @param {Estream} estream
  */
 function start(estream) {
-  estream._startArtifact = estream._sink.start(
-    push.bind(null, estream),
-    error.bind(null, estream),
-    end.bind(null, estream)
-  );
-  estream._startTimeout = false;
+  if (!estream._started && !estream._ended) {
+    estream._startArtifact = estream._sink.start(
+      push.bind(null, estream),
+      error.bind(null, estream),
+      end.bind(null, estream)
+    );
+    estream._started = true;
+    estream._startTimeout = false;
+  }
 }
 
 /**
@@ -117,7 +120,13 @@ function start(estream) {
  * @param {Estream} estream
  */
 function stop(estream) {
-  estream._sink.stop(estream._startArtifact);
+  if (estream._sink.stop) {
+    estream._sink.stop(estream._startArtifact);
+    estream._started = false;
+  } else if (estream._startArtifact && typeof estream._startArtifact === 'function') {
+    estream._startArtifact();
+    estream._started = false;
+  }
   estream._stopTimeout = false;
 }
 
@@ -311,6 +320,7 @@ function Estream(sink, options) {
   // if you attempt to access or alter them, you will get undesirable effects.
   this._historyCount = (options && options.hasOwnProperty('history')) ? options.history : 0;
   this._concatEnd = new EsEnd();
+  this._started = false;
   this._history = [];
   this._sources = [];
   this._subscribers = [];
@@ -318,12 +328,6 @@ function Estream(sink, options) {
   this._startArtifact = false;
   this._startTimeout = false;
   this._stopTimeout = false;
-
-  if (!this._sink.stop || typeof this._sink.stop !== 'function') {
-    this._sink.stop = function(x) {
-      if (x && typeof x === 'function') x();
-    };
-  }
 }
 
 /**
@@ -533,6 +537,26 @@ Estream.prototype.filter = function(fn, options) {
       });
     }.bind(this)
   }, options);
+};
+
+/**
+ * Returns an estream that combines
+ * any number of streams with the current stream.
+ * Inherits the history option from the main stream.
+ *
+ * Takes X number of estreams as args.
+ *
+ * @name concat
+ * @return {Estream}
+ *
+ * @example
+ * var mEstream = estream1.concat(estream2, estream3);
+ */
+Estream.prototype.concat = function() {
+  return combine(
+    [this].concat(Array.prototype.slice.apply(arguments)),
+    { history: this._historyCount }
+  );
 };
 
 /**
